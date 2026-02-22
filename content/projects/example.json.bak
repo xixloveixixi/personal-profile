@@ -1,0 +1,18 @@
+{
+  "slug": "example-project",
+  "title": "Example Project",
+  "shortDescription": "A sample project to demonstrate the portfolio system functionality",
+  "longDescription": "This is an example project that showcases how portfolio projects are displayed. It includes all the key sections: problem statement, technical solution, challenges faced, and results achieved.",
+  "problem": "Business needed a solution to showcase technical projects and demonstrate capabilities to potential clients and employers.",
+  "solution": "Built a modern portfolio website using Next.js 14 with TypeScript, implementing a responsive design with filtering capabilities and detailed project pages.",
+  "challenges": "Implementing smooth animations while maintaining performance, ensuring responsive design across all devices, and creating an intuitive filtering system.",
+  "results": "Successfully created a portfolio platform that effectively showcases projects with a clean, modern interface. The site loads quickly and provides an excellent user experience.",
+  "technologies": ["Next.js", "TypeScript", "React", "Tailwind CSS", "Framer Motion"],
+  "githubUrl": "https://github.com/example/project",
+  "demoUrl": "https://example-project.vercel.app",
+  "featuredImage": "/images/projects/example.jpg",
+  "publishedAt": "2026-02-05",
+  "featured": true,
+  "order": 1
+}
+

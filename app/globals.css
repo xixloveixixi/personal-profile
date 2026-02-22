@@ -1,0 +1,319 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #1a0a2e;
+  --foreground: #FFFFFF;
+  --primary: #564B60;
+  --primary-dark: #564B60;
+  --primary-light: #FFFFFF;
+  --primary-gradient: linear-gradient(135deg, #6b21a8 0%, #3b0764 50%, #000000 100%);
+  --primary-glow: 0 0 20px rgba(139, 92, 246, 0.4);
+  --text-color: #cca8df;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  color: var(--foreground);
+  background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 30%, #3b0764 60%, #000000 100%);
+  height: 100%;
+  width: 100%;
+}
+
+/* 自定义滚动条样式 */
+/* WebKit (Chrome, Safari, Edge) */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(124, 58, 206, 0.6);
+  border-radius: 5px;
+  border: 2px solid rgba(0, 0, 0, 0.2);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.8);
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(124, 58, 206, 0.6) rgba(0, 0, 0, 0.3);
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border-width: 0;
+  }
+  
+  .focus\:not-sr-only:focus {
+    position: static;
+    width: auto;
+    height: auto;
+    padding: inherit;
+    margin: inherit;
+    overflow: visible;
+    clip: auto;
+    white-space: normal;
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+  overflow-y: hidden;
+  height: 100%;
+  position: fixed;
+  width: 100%;
+}
+
+/* Focus styles for accessibility */
+*:focus-visible {
+  outline: 2px solid #564B60;
+  outline-offset: 2px;
+  outline-style: solid;
+}
+
+/* Primary gradient backgrounds */
+.bg-primary-gradient {
+  background: linear-gradient(135deg, #564B60 0%, #85708F 50%, #DBBDBE 100%);
+}
+
+.bg-primary-gradient-light {
+  background: linear-gradient(135deg, #F6E1C9 0%, #DBBDBE 50%, #85708F 100%);
+}
+
+.bg-primary-gradient-dark {
+  background: linear-gradient(135deg, #564B60 0%, #85708F 50%, #878D87 100%);
+}
+
+/* Primary glow effects */
+.glow-primary {
+  box-shadow: 0 0 20px rgba(86, 75, 96, 0.3);
+}
+
+.glow-primary-lg {
+  box-shadow: 0 0 40px rgba(86, 75, 96, 0.4);
+}
+.text-accent-gray {
+  color: var(--text-color);
+}
+/* Animated gradient text */
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 3s ease infinite;
+}
+
+/* Shimmer animation for progress bars */
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
+/* Fade in animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out;
+}
+
+/* Background gradient animation - 从右下到左上，只改变透明度 */
+@keyframes gradientMove {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.9;
+  }
+}
+
+@keyframes glowPulse {
+  0%, 100% {
+    opacity: 0.4;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes radialGlow {
+  0%, 100% {
+    opacity: 0.5;
+    transform: translate(0, 0);
+  }
+  25% {
+    opacity: 0.8;
+    transform: translate(30px, -30px);
+  }
+  50% {
+    opacity: 0.6;
+    transform: translate(-30px, 30px);
+  }
+  75% {
+    opacity: 0.7;
+    transform: translate(20px, 20px);
+  }
+}
+
+@keyframes colorShift {
+  0% {
+    filter: hue-rotate(0deg) brightness(1);
+  }
+  50% {
+    filter: hue-rotate(10deg) brightness(1.1);
+  }
+  100% {
+    filter: hue-rotate(0deg) brightness(1);
+  }
+}
+
+.animate-gradient-bg {
+  animation: gradientMove 15s ease-in-out infinite, colorShift 20s ease-in-out infinite;
+}
+
+.animate-glow-pulse {
+  animation: glowPulse 3s ease-in-out infinite;
+}
+
+.animate-radial-glow {
+  animation: radialGlow 6s ease-in-out infinite;
+}
+
+/* MagicUI Animations */
+@keyframes shine-pulse {
+  0% {
+    --angle: 0deg;
+  }
+  100% {
+    --angle: 360deg;
+  }
+}
+
+@property --angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.animate-shine-pulse {
+  animation: shine-pulse var(--duration, 14s) linear infinite;
+}
+
+/* Shiny text animation */
+@keyframes shiny-text {
+  0%, 90%, 100% {
+    background-position: calc(-100% - var(--shiny-width)) 0;
+  }
+  30%, 60% {
+    background-position: calc(100% + var(--shiny-width)) 0;
+  }
+}
+
+.animate-shiny-text {
+  animation: shiny-text 8s infinite;
+}
+
+/* Meteor animation */
+@keyframes meteor {
+  0% {
+    transform: rotate(215deg) translateX(0);
+    opacity: 1;
+  }
+  70% {
+    opacity: 1;
+  }
+  100% {
+    transform: rotate(215deg) translateX(-500px);
+    opacity: 0;
+  }
+}
+
+.animate-meteor {
+  animation: meteor linear infinite;
+}
+
+/* Number ticker styles */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  
+  .animate-shimmer {
+    animation: none !important;
+  }
+  
+  .animate-fade-in {
+    animation: none !important;
+  }
+  
+  .animate-shine-pulse {
+    animation: none !important;
+  }
+  
+  .animate-shiny-text {
+    animation: none !important;
+  }
+  
+  .animate-meteor {
+    animation: none !important;
+  }
+}
+

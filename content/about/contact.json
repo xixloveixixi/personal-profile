@@ -1,0 +1,31 @@
+[
+  {
+    "platform": "GitHub",
+    "url": "https://github.com/xixloveixixi",
+    "icon": "github",
+    "label": "GitHub",
+    "order": 1
+  },
+  {
+    "platform": "微信",
+    "url": "#",
+    "icon": "wechat",
+    "label": "微信",
+    "order": 2
+  },
+  {
+    "platform": "CSDN",
+    "url": "https://blog.csdn.net/2403_88913721?spm=1000.2115.3001.5343",
+    "icon": "csdn",
+    "label": "CSDN",
+    "order": 3
+  },
+  {
+    "platform": "掘金",
+    "url": "https://juejin.cn/user/1373741800227131",
+    "icon": "juejin",
+    "label": "掘金",
+    "order": 4
+  }
+]
+

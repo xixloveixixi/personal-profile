@@ -1,0 +1,51 @@
+[
+  {
+    "name": "React",
+    "category": "framework",
+    "proficiency": 90,
+    "description": "Expert level in React development"
+  },
+  {
+    "name": "Next.js",
+    "category": "framework",
+    "proficiency": 85,
+    "description": "Proficient in Next.js App Router"
+  },
+  {
+    "name": "TypeScript",
+    "category": "language",
+    "proficiency": 88,
+    "description": "Strong TypeScript skills"
+  },
+  {
+    "name": "JavaScript",
+    "category": "language",
+    "proficiency": 92,
+    "description": "Expert JavaScript developer"
+  },
+  {
+    "name": "Tailwind CSS",
+    "category": "framework",
+    "proficiency": 80,
+    "description": "Proficient in utility-first CSS"
+  },
+  {
+    "name": "Git",
+    "category": "tool",
+    "proficiency": 85,
+    "description": "Version control expertise"
+  },
+  {
+    "name": "Communication",
+    "category": "soft-skill",
+    "proficiency": 90,
+    "description": "Strong communication skills"
+  },
+  {
+    "name": "Problem Solving",
+    "category": "soft-skill",
+    "proficiency": 88,
+    "description": "Excellent problem-solving abilities"
+  }
+]
+

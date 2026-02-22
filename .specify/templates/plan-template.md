@@ -31,7 +31,17 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+**Compliance Verification**:
+- [ ] Component-First: All UI elements planned as reusable components?
+- [ ] Responsive & Accessible: Mobile-first design approach, WCAG 2.1 AA compliance planned?
+- [ ] Performance: Performance targets defined (Lighthouse ≥ 90, FCP < 1.5s, LCP < 2.5s)?
+- [ ] Modern Practices: TypeScript usage, linting/formatting, conventional commits planned?
+- [ ] Content-Driven: Content structure allows easy updates without code changes?
+- [ ] Technology Standards: Stack choices align with constitution (React/Next.js, TypeScript, Tailwind)?
+- [ ] Quality Gates: Accessibility audit, responsive testing, error-free builds planned?
+
+**Complexity Justification** (if any principles violated):
+[Document any deviations with explicit rationale]
 
 ## Project Structure
 

@@ -1,50 +1,72 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+<!--
+Sync Impact Report:
+Version: 0.0.0 → 1.0.0 (Initial creation)
+Modified principles: N/A (new constitution)
+Added sections: Core Principles, Technology Standards, Development Workflow, Governance
+Removed sections: N/A
+Templates requiring updates:
+  - ✅ plan-template.md (Constitution Check section ready)
+  - ✅ spec-template.md (no constitution-specific references)
+  - ✅ tasks-template.md (no constitution-specific references)
+  - ✅ checklist-template.md (no constitution-specific references)
+Follow-up TODOs: None
+-->
+
+# Personal Portfolio Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Component-First Architecture
+Every UI element MUST be built as a reusable component. Components must be self-contained, independently testable, and documented with clear props interfaces. Shared components live in a dedicated components directory. No inline component definitions in pages or layouts—all UI elements must be extracted to named components with clear responsibilities.
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+### II. Responsive & Accessible Design (NON-NEGOTIABLE)
+All interfaces MUST be mobile-first and responsive across breakpoints (mobile, tablet, desktop). WCAG 2.1 AA compliance is mandatory for all user-facing content. Semantic HTML, proper ARIA labels, keyboard navigation support, and sufficient color contrast ratios are required. Design tokens (spacing, colors, typography) must be centralized and used consistently.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### III. Performance Optimization
+Page load times MUST be optimized: Lighthouse Performance score ≥ 90, First Contentful Paint < 1.5s, Largest Contentful Paint < 2.5s. Images must be optimized (WebP/AVIF with fallbacks), lazy-loaded where appropriate. Code splitting and dynamic imports required for route-based chunks. No unnecessary dependencies—bundle size must be justified and monitored.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### IV. Modern Development Practices
+TypeScript is mandatory for all new code. ESLint and Prettier must be configured and enforced. Git commits follow conventional commits format. All features must be developed in feature branches with descriptive names. Code reviews (self-review minimum) required before merging to main. Environment variables for configuration, never hardcode secrets or API keys.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### V. Content-Driven Structure
+Content should be easily maintainable and updatable. Prefer markdown or structured data formats for portfolio content (projects, blog posts, etc.). Content and presentation must be separated—content changes should not require code changes. Consider headless CMS or static data files for easy content management.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+## Technology Standards
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+**Primary Stack**: React/Next.js (or equivalent modern framework), TypeScript, Tailwind CSS  
+**Build Tool**: Vite, Next.js, or equivalent modern bundler  
+**Testing**: Vitest/Jest for unit tests, Playwright/Cypress for E2E (if applicable)  
+**Deployment**: Static site generation preferred, serverless functions for dynamic features  
+**Hosting**: Vercel, Netlify, or equivalent modern platform  
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+**Constraints**: 
+- No jQuery or legacy libraries unless absolutely necessary
+- Prefer CSS-in-JS or utility-first CSS (Tailwind) over global CSS
+- API calls must include proper error handling and loading states
+- All external dependencies must be justified and kept up-to-date
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+## Development Workflow
+
+**Branch Strategy**: Feature branches from `main`, descriptive branch names (`feature/`, `fix/`, `docs/` prefixes)  
+**Code Review**: Self-review minimum before merge, verify accessibility and responsive design  
+**Testing**: Unit tests for utilities and complex logic, visual regression testing for UI components  
+**Deployment**: Automated deployments from `main` branch, preview deployments for feature branches  
+**Documentation**: README must include setup instructions, component documentation in code comments or Storybook  
+
+**Quality Gates**:
+- All pages must pass Lighthouse accessibility audit (≥ 90)
+- No console errors or warnings in production builds
+- Responsive design verified on mobile, tablet, and desktop viewports
+- All external links must be valid and functional
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution supersedes all other development practices and style guides. Amendments require:
+1. Documentation of the change rationale
+2. Update to this constitution file with version bump
+3. Propagation of changes to affected templates and documentation
+4. Verification that existing features remain compliant
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+All feature implementations must verify compliance with these principles before merging. Complexity beyond these principles must be justified in the implementation plan with explicit rationale for why simpler alternatives were rejected.
+
+**Version**: 1.0.0 | **Ratified**: 2026-02-05 | **Last Amended**: 2026-02-05

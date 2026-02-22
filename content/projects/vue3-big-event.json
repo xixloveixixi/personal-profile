@@ -1,0 +1,24 @@
+{
+  "slug": "vue3-big-event",
+  "title": "大事件文章管理系统",
+  "shortDescription": "一个基于 Vue 3 的前后端分离文章管理后台系统，涵盖用户认证、文章发布与管理、分类管理、个人中心等核心模块，采用 Token 鉴权机制、Axios 拦截器、Pinia 持久化状态管理及富文本编辑器，提供完整的内容管理工作流。",
+  "longDescription": "本项目是一个功能完备的文章内容管理后台系统（CMS），基于 Vue 3 Composition API 构建。系统包含用户注册与登录（含表单校验与 Token 鉴权）、文章 CRUD（支持富文本编辑、封面图上传、分类筛选、分页查询、草稿/发布状态管理）、文章分类管理（增删改查）、以及个人中心（基本资料修改、头像上传预览与更换、密码重置）等功能模块。项目采用 Axios 请求/响应拦截器统一处理 Token 注入与异常响应，使用 Pinia 进行全局状态管理并配合持久化插件实现登录态保持，通过 Vue Router 导航守卫实现路由权限控制，整体架构清晰、模块化程度高。",
+  "technologies": [
+    "Vue 3",
+    "Vite 5",
+    "Vue Router 4",
+    "Pinia",
+    "Element Plus",
+    "SCSS",
+    "Axios",
+    "Vue Quill 富文本编辑器",
+    "Pinia Plugin Persistedstate"
+  ],
+  "githubUrl": "https://github.com/xixloveixixi/vueBigEvent",
+  "demoUrl": "",
+  "gallery": [
+    "/images/big-event-1.png",
+    "/images/big-event-2.png"
+  ],
+  "order": 4
+}

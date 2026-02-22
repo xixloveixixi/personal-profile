@@ -1,0 +1,80 @@
+[
+  {
+    "id": "work-lilith-2025",
+    "type": "work",
+    "title": "前端开发实习生",
+    "organization": "上海莉莉丝科技有限公司",
+    "location": "上海",
+    "startDate": "2025-11-01",
+    "endDate": null,
+    "description": "负责大数据表字段渲染性能优化、Figma-MCP 工作流集成与 DAP 移动端性能优化",
+    "achievements": [
+      "虚拟滚动 + 按需懒加载 + 智能滚动检测，首屏渲染速度从 2.3s 降至 0.5s，内存降低 95%+",
+      "Figma-MCP 使用指南文档沉淀，优化 AI 提示规则，迭代周期缩短 15%-20%",
+      "HTTP 层请求去重方案，Map 管理 pending 队列 + 拦截器自动 abort 重复请求，解决接口竞态问题"
+    ],
+    "technologies": ["React", "TypeScript", "虚拟滚动", "MCP协议", "性能优化"],
+    "order": 1
+  },
+  {
+    "id": "work-weida-2025",
+    "type": "work",
+    "title": "前端开发实习生",
+    "organization": "上海维搭信息科技有限公司",
+    "location": "上海",
+    "startDate": "2025-07-01",
+    "endDate": "2025-10-31",
+    "description": "负责华刚铜矿项目大屏的前端开发与公司物料库的设计开发",
+    "achievements": [
+      "设计自适应布局算法：实时检测视口与元素边界，动态优化弹窗位置，解决 3D 场景 UI 溢出问题",
+      "开发 10+ 定制化业务组件（图表、浮动卡片、弹窗等）",
+      "为公司统一物料库贡献 7 个标准化组件，被 3 个项目复用"
+    ],
+    "technologies": ["Vue3", "TypeScript", "Echarts", "3D可视化", "组件库"],
+    "order": 2
+  },
+  {
+    "id": "project-farm-2024",
+    "type": "work",
+    "title": "湘潭农交中心-高标准农田项目大屏（前端核心开发成员）",
+    "organization": "项目经历",
+    "location": "湘潭",
+    "startDate": "2024-12-01",
+    "endDate": "2025-02-28",
+    "description": "负责开发高标准农田数据可视化大屏，融合地理与农业数据，动态监测 20+ 核心指标",
+    "achievements": [
+      "基于天地图的地理信息可视化系统，实现底图加载、图层叠加与交互控制",
+      "分批次并发请求与流式渲染，万级地理坐标数据渲染时间从 3 秒缩短至 1.5 秒",
+      "二次封装 Axios，统一请求头配置和各种异常情况处理"
+    ],
+    "technologies": ["Vue3", "TypeScript", "Echarts", "天地图", "Axios", "Vite", "Element UI"],
+    "order": 3
+  },
+  {
+    "id": "project-cream-2025",
+    "type": "work",
+    "title": "Cream-Design 组件库（前端开发负责人）",
+    "organization": "项目经历",
+    "startDate": "2025-05-01",
+    "endDate": "2025-07-31",
+    "description": "主导 CreamDesign 组件库整体架构设计，开发 Table、Form、Menu、Upload 等十余个高频业务组件",
+    "achievements": [
+      "虚拟滚动优化：Table 组件支持万级数据流畅滚动，初始渲染 DOM 节点减少 80.3%",
+      "大文件分片上传：Web Worker 异步计算 MD5 实现秒传，IndexedDB 持久化支持断点续传，吞吐提升 81%",
+      "基于 useReducer + async-validator 构建表单验证引擎，支持跨字段联动校验"
+    ],
+    "technologies": ["React", "TypeScript", "SCSS", "Storybook", "Rollup", "Jest"],
+    "order": 4
+  },
+  {
+    "id": "education-hust-2023",
+    "type": "education",
+    "title": "数据科学与大数据技术",
+    "organization": "湖南科技大学",
+    "location": "湘潭",
+    "startDate": "2023-09-01",
+    "endDate": "2027-06-30",
+    "description": "GPA 3.78/4.0（专业第四）| 国家励志奖学金 | 校一等奖学金 | 湖南省计算机作品赛三等奖 | 省级立项",
+    "order": 5
+  }
+]

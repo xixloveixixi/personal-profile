@@ -1,0 +1,24 @@
+{
+  "slug": "cream-design",
+  "title": "Cream-Design 组件库",
+  "shortDescription": "Cream-Design 是一个从零构建的 React 组件库，专注于性能优化和开发体验。",
+  "technologies": [
+    "React 19",
+    "TypeScript",
+    "Rollup",
+    "Storybook 8",
+    "Jest",
+    "async-validator",
+    "Web Worker",
+    "ESLint",
+    "Prettier",
+    "Husky"
+  ],
+  "githubUrl": "https://github.com/xixloveixixi/creamdesign",
+  "demoUrl": "",
+  "gallery": [
+    "/images/cream-design-1.png",
+    "/images/cream-design-2.png"
+  ],
+  "order": 1
+}

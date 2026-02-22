@@ -1,0 +1,24 @@
+{
+  "slug": "chongqing-city-showcase",
+  "title": "重庆城市文化展示网站",
+  "shortDescription": "一个以重庆城市文化为主题的沉浸式交互展示网站，涵盖山水地貌、美食文化、历史底蕴、江湖气息和未来发展五大板块，运用视差滚动、Canvas 星空动画、瀑布流布局、菱形相册等丰富的前端视觉效果，呈现重庆的立体魅力。",
+  "technologies": [
+    "Vue 3",
+    "Vite 6",
+    "Vue Router 4",
+    "Pinia",
+    "SCSS",
+    "Element Plus",
+    "Animate.css",
+    "WOW.js",
+    "Canvas API"
+  ],
+  "githubUrl": "https://github.com/xixloveixixi/webPractice",
+  "demoUrl": "",
+  "gallery": [
+    "/images/cq-web1.png",
+    "/images/cq-web2.png",
+    "/images/cq-web3.png"
+  ],
+  "order": 3
+}

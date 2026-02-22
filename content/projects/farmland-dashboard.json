@@ -1,0 +1,17 @@
+{
+  "slug": "farmland-dashboard",
+  "title": "高标准农田数据大屏",
+  "shortDescription": "基于 Vue3 + 天地图 GIS 的可视化大屏，实现地块信息、交易数据、统计图表的多维度展示。",
+  "longDescription": "为湘潭农交中心开发的高标准农田项目数据可视化大屏，集成天地图 GIS 服务，实现地块信息、交易数据、统计图表的多维度展示。",
+  "problem": "农田数据量大，传统地图渲染方式性能差，交互体验不佳",
+  "solution": "采用 Canvas 图层叠加、数据分片加载、视口裁剪等技术优化渲染性能",
+  "challenges": "万级坐标点渲染优化、地图层级切换流畅度、实时数据更新",
+  "results": "渲染时间从 3s 优化到 1.5s，支持 10万+ 数据点流畅展示",
+  "technologies": ["Vue3", "TypeScript", "ECharts", "天地图", "Vite", "Axios","Element UI","Vue Router","Pinia"],
+  "githubUrl": "",
+  "featuredImage": "/images/big-data-watch-1.png",
+  "gallery": ["/images/big-data-watch-1.png", "/images/big-data-watch-2.png"],
+  "publishedAt": "2025-02-20",
+  "featured": true,
+  "order": 2
+}

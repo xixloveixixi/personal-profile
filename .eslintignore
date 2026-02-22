@@ -1,0 +1,10 @@
+node_modules/
+.next/
+out/
+build/
+dist/
+*.config.js
+public/sw.js
+public/workbox-*.js
+public/worker-*.js
+

@@ -1,0 +1,22 @@
+{
+    "slug": "zhangyuan-fan-showcase",
+    "title": "代码情书网站",
+    "shortDescription": "一个以歌手张远为主题的沉浸式交互展示网站，涵盖出道历程、歌词打字机、表白情书、烟花特效和音乐播放器五大板块，运用钢琴手风琴相册、卡片悬停动画、时间线组件、Canvas 烟花动画、iframe 嵌套页面等丰富的前端视觉效果，呈现张远从快男出道到披荆斩棘的完整成长轨迹。",
+    "technologies": [
+      "Vue 3",
+      "Vite 5",
+      "Vue Router 4",
+      "Less",
+      "SCSS",
+      "Element Plus",
+      "vue3-typed-js",
+      "Canvas API"
+    ],
+    "githubUrl": "https://github.com/xixloveixixi/daimaqingshu",
+    "demoUrl": "",
+    "gallery": [
+      "/images/dmqs-1.png",
+      "/images/dmqs-2.png"
+    ],
+    "order": 5
+  }
