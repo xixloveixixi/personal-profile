@@ -7,6 +7,7 @@ import { Typography, Space, Tag, Tooltip } from 'antd'
 import { useEffect, useState } from 'react'
 import contactData from '@/content/about/contact.json'
 import LightRays from '@/components/background/LightRays'
+import ChatWindow from '@/components/chat/ChatWindow'
 
 const { Title, Paragraph, Text } = Typography
 
@@ -91,6 +92,9 @@ export default function Home() {
             })}
           </Space>
         </div>
+
+      {/* 聊天窗口组件 */}
+      <ChatWindow />
     </div>
   )
 }

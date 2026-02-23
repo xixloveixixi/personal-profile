@@ -1,5 +1,18 @@
 [
   {
+    "id": "education-hnust",
+    "type": "education",
+    "title": "本科",
+    "organization": "湖南科技大学",
+    "location": "湖南湘潭",
+    "startDate": "2021-09-01",
+    "endDate": "2025-06-30",
+    "description": "计算机科学与技术专业，本科毕业院校，学校位于湖南湘潭，2025年6月毕业",
+    "achievements": ["系统学习计算机基础课程", "参与多个项目开发实践"],
+    "technologies": ["计算机科学", "软件工程", "数据结构", "算法"],
+    "order": 0
+  },
+  {
     "id": "work-lilith-2025",
     "type": "work",
     "title": "前端开发实习生",
@@ -65,16 +78,5 @@
     ],
     "technologies": ["React", "TypeScript", "SCSS", "Storybook", "Rollup", "Jest"],
     "order": 4
-  },
-  {
-    "id": "education-hust-2023",
-    "type": "education",
-    "title": "数据科学与大数据技术",
-    "organization": "湖南科技大学",
-    "location": "湘潭",
-    "startDate": "2023-09-01",
-    "endDate": "2027-06-30",
-    "description": "GPA 3.78/4.0（专业第四）| 国家励志奖学金 | 校一等奖学金 | 湖南省计算机作品赛三等奖 | 省级立项",
-    "order": 5
   }
 ]
