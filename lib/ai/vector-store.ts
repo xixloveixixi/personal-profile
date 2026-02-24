@@ -353,6 +353,28 @@ export async function searchSimilarVectors(
       return await searchByText(query, limit)
     }
 
+    // 如果查询实习/工作经历，确保返回所有相关记录
+    const queryLower = query.toLowerCase()
+    const isWorkQuery = queryLower.includes('实习') || queryLower.includes('工作') || 
+                        queryLower.includes('公司') || queryLower.includes('经历')
+    
+    if (isWorkQuery && data && data.length > 0) {
+      // 获取所有工作经历（timeline 类型）
+      const { data: allWorkData, error: workError } = await getSupabase()
+        .from('knowledge_vectors')
+        .select('content, metadata')
+        .eq('metadata->>type', 'timeline')
+      
+      if (!workError && allWorkData && allWorkData.length > 0) {
+        console.log(`[Vector Search] 工作查询: 返回 ${allWorkData.length} 条工作经历`)
+        return allWorkData.map((item: any) => ({
+          content: item.content,
+          metadata: item.metadata,
+          similarity: 1.0,
+        }))
+      }
+    }
+
     return data || []
   } catch (error: any) {
     console.warn('向量搜索失败，使用文本搜索:', error.message)
@@ -438,9 +460,10 @@ async function searchByText(
         if (item.metadata?.type === 'project') {
           typeBoost = 1.5
         }
-      } else if (queryLower.includes('实习') || queryLower.includes('工作')) {
+      } else if (queryLower.includes('实习') || queryLower.includes('工作') || queryLower.includes('公司')) {
+        // 实习/工作查询：提升 timeline 类型权重，确保返回所有实习经历
         if (item.metadata?.type === 'timeline' || item.metadata?.type === 'work') {
-          typeBoost = 1.5
+          typeBoost = 2.0 // 提高权重
         }
       }
       
@@ -450,7 +473,7 @@ async function searchByText(
         similarity: similarity * typeBoost,
       }
     })
-    .filter((item) => item.similarity > 0.1) // 提高阈值，只返回相关性较高的结果
+    .filter((item) => item.similarity > 0.05) // 降低阈值，确保返回更多相关结果
     .sort((a, b) => b.similarity - a.similarity)
     .slice(0, limit)
 
