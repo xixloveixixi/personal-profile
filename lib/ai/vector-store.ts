@@ -98,6 +98,9 @@ export interface VectorChunkInput {
     type: 'personal' | 'skill' | 'project' | 'blog' | 'timeline'
     source?: string
     title?: string
+    organization?: string
+    isInternship?: boolean
+    [key: string]: unknown
   }
 }
 
@@ -363,7 +366,7 @@ export async function searchSimilarVectors(
       const { data: allWorkData, error: workError } = await getSupabase()
         .from('knowledge_vectors')
         .select('content, metadata')
-        .eq('metadata->>type', 'timeline')
+        .filter('metadata->>type', 'eq', 'timeline')
       
       if (!workError && allWorkData && allWorkData.length > 0) {
         console.log(`[Vector Search] 工作查询: 返回 ${allWorkData.length} 条工作经历`)

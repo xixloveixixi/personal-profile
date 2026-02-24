@@ -11,6 +11,9 @@ export interface KnowledgeChunk {
     type: 'personal' | 'skill' | 'project' | 'blog' | 'timeline'
     source?: string
     title?: string
+    organization?: string
+    isInternship?: boolean
+    [key: string]: unknown
   }
 }
 
