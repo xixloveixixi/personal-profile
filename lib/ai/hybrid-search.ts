@@ -15,34 +15,60 @@ export async function hybridSearch(
   // 1. 先尝试完整查询的向量搜索
   const vectorResults = await searchSimilarVectors(query, limit)
   
-  // 2. 如果向量搜索没有结果，尝试关键词搜索
+  // 2. 总是尝试关键词搜索（即使向量搜索有结果，也补充关键词结果）
   let keywordResults: Array<{ content: string; metadata: any; similarity: number }> = []
-  if (vectorResults.length === 0) {
-    keywordResults = await searchByKeywords(query, limit)
-  }
+  keywordResults = await searchByKeywords(query, limit)
   
-  // 3. 如果还是没有结果，尝试提取关键词进行子查询
-  if (vectorResults.length === 0 && keywordResults.length === 0) {
+  // 3. 如果关键词搜索结果较少，尝试提取关键词进行子查询
+  if (keywordResults.length < 2) {
     // 提取关键实体词
     const keyTerms = extractKeyTerms(query)
-    for (const term of keyTerms) {
+    for (const term of keyTerms.slice(0, 3)) { // 只尝试前3个关键词，避免过多查询
       const termResults = await searchByKeywords(term, 2)
       keywordResults.push(...termResults)
     }
   }
   
-  // 合并结果，去重
+  // 合并结果，去重，并优先返回作品集项目
   const seen = new Set<string>()
   const combined: Array<{ content: string; metadata: any; similarity: number }> = []
   
+  // 分离作品集项目和 GitHub 仓库
+  const portfolioProjects: Array<{ content: string; metadata: any; similarity: number }> = []
+  const githubRepos: Array<{ content: string; metadata: any; similarity: number }> = []
+  const others: Array<{ content: string; metadata: any; similarity: number }> = []
+  
   for (const r of [...vectorResults, ...keywordResults]) {
-    if (!seen.has(r.content)) {
-      combined.push(r)
-      seen.add(r.content)
+    if (seen.has(r.content)) continue
+    seen.add(r.content)
+    
+    // 判断是否为作品集项目（source 包含 /portfolio/）
+    const source = r.metadata?.source || ''
+    if (source.includes('/portfolio/')) {
+      // 作品集项目：提升优先级（相似度 +0.3）
+      portfolioProjects.push({
+        ...r,
+        similarity: r.similarity + 0.3,
+      })
+    } else if (source.includes('github.com')) {
+      // GitHub 仓库：降低优先级（相似度 -0.2）
+      githubRepos.push({
+        ...r,
+        similarity: Math.max(0, r.similarity - 0.2),
+      })
+    } else {
+      others.push(r)
     }
   }
   
-  return combined.slice(0, limit)
+  // 按优先级排序：作品集项目 > 其他 > GitHub 仓库
+  const sorted = [
+    ...portfolioProjects.sort((a, b) => b.similarity - a.similarity),
+    ...others.sort((a, b) => b.similarity - a.similarity),
+    ...githubRepos.sort((a, b) => b.similarity - a.similarity),
+  ]
+  
+  return sorted.slice(0, limit)
 }
 
 /**
@@ -50,31 +76,61 @@ export async function hybridSearch(
  */
 function extractKeyTerms(query: string): string[] {
   const terms: string[] = []
+  const queryLower = query.toLowerCase()
+  
+  // 技术栈相关 - 优先提取技术名称
+  const techKeywords = ['react', 'vue', 'typescript', 'javascript', 'next.js', 'node.js', 'python', 'java']
+  for (const tech of techKeywords) {
+    if (queryLower.includes(tech)) {
+      terms.push(tech)
+      // 如果提到技术栈，也添加"项目"作为搜索词
+      if (queryLower.includes('技术栈') || queryLower.includes('技术')) {
+        terms.push('项目')
+      }
+    }
+  }
   
   // 教育相关
-  if (query.includes('学校') || query.includes('毕业') || query.includes('大学')) {
+  if (queryLower.includes('学校') || queryLower.includes('毕业') || queryLower.includes('大学')) {
     terms.push('学校', '毕业', '教育', '本科')
   }
   
-  // 工作/项目相关
-  if (query.includes('项目') || query.includes('工作') || query.includes('公司')) {
-    terms.push('项目', '工作', '公司')
+  // 工作/实习相关
+  if (queryLower.includes('实习') || queryLower.includes('工作') || queryLower.includes('公司') || queryLower.includes('经历')) {
+    terms.push('实习', '工作', '公司', '经历', '时间线')
+    // 如果提到实习，也添加相关关键词
+    if (queryLower.includes('实习')) {
+      terms.push('前端开发', '开发', '实习生')
+    }
+  }
+  
+  // 项目相关
+  if (queryLower.includes('项目') || queryLower.includes('作品')) {
+    terms.push('项目', '作品')
   }
   
   // 技能相关
-  if (query.includes('技术') || query.includes('技能') || query.includes('会什么')) {
+  if (queryLower.includes('技术') || queryLower.includes('技能') || queryLower.includes('会什么')) {
     terms.push('技术', '技能')
   }
   
-  // 提取2-4个字的词
-  const words = query.split(/\s+/)
+  // 联系方式/个人信息相关
+  if (queryLower.includes('联系方式') || queryLower.includes('联系') || queryLower.includes('电话') || 
+      queryLower.includes('email') || queryLower.includes('邮箱') || queryLower.includes('github') ||
+      queryLower.includes('个人信息') || queryLower.includes('个人简介') || queryLower.includes('简介')) {
+    terms.push('联系方式', '联系', '个人信息', '个人简介', '电话', '邮箱', 'github')
+  }
+  
+  // 提取2-6个字的词（包括技术名称）
+  const words = queryLower.split(/[\s，,、]+/)
   for (const word of words) {
-    if (word.length >= 2 && word.length <= 6 && !terms.includes(word)) {
+    if (word.length >= 2 && word.length <= 8 && !terms.includes(word)) {
       terms.push(word)
     }
   }
   
-  return terms.slice(0, 5) // 最多5个关键词
+  // 去重并返回
+  return [...new Set(terms)].slice(0, 8) // 最多8个关键词
 }
 
 /**

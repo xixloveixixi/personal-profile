@@ -15,12 +15,9 @@ export interface KnowledgeChunk {
 }
 
 /**
- * 构建完整的知识库内容
+ * 创建个人信息知识块
  */
-export async function buildKnowledgeBase(): Promise<KnowledgeChunk[]> {
-  const chunks: KnowledgeChunk[] = []
-
-  // 1. 个人信息 - 从 about 页面提取
+function createPersonalInfoChunk(): KnowledgeChunk {
   const personalInfo = `
 我是阿菥（蒋乙菥），一名前端工程师。
 
@@ -40,61 +37,153 @@ export async function buildKnowledgeBase(): Promise<KnowledgeChunk[]> {
 - 掘金: https://juejin.cn/user/1373741800227131
 - CSDN: https://blog.csdn.net/2403_88913721
 - 电话: 18723832290
+
+教育背景：
+- 学校：湖南科技大学
+- 专业：数据科学与大数据技术
+- 毕业时间：2027年6月
   `.trim()
 
-  chunks.push({
+  return {
     id: 'personal-info',
     content: personalInfo,
     metadata: {
       type: 'personal',
       title: '个人信息',
     },
-  })
+  }
+}
 
-  // 2. 技能信息
+/**
+ * 创建技能信息知识块
+ */
+function createSkillsChunks(skills: typeof skillsData): KnowledgeChunk[] {
   const skillsInfo = `
 我的技能栈：
-${skillsData.map(s => `- ${s.name} (${s.category}): ${s.proficiency}% - ${s.description}`).join('\n')}
+${skills.map(s => `- ${s.name} (${s.category}): ${s.proficiency}% - ${s.description}`).join('\n')}
   `.trim()
 
-  chunks.push({
-    id: 'skills-info',
-    content: skillsInfo,
-    metadata: {
-      type: 'skill',
-      title: '技能栈',
+  return [
+    {
+      id: 'skills-info',
+      content: skillsInfo,
+      metadata: {
+        type: 'skill',
+        title: '技能栈',
+      },
     },
-  })
+  ]
+}
 
-  // 3. 时间线/经历（教育 + 工作 + 项目经历）
-  const timelineInfo = timelineData
-    .map((item) => {
-      const dateRange =
-        item.endDate
-          ? `${item.startDate} 至 ${item.endDate}`
-          : `${item.startDate} 至今`
-      const typeLabel = item.type === 'work' ? '工作经历' : item.type === 'education' ? '教育经历' : '项目经历'
-      return `
+/**
+ * 创建时间线经历知识块（教育 + 工作 + 项目经历）
+ */
+function createTimelineChunks(timeline: typeof timelineData): KnowledgeChunk[] {
+  const chunks: KnowledgeChunk[] = []
+  
+  // 按类型分组，创建多个知识块以提高搜索精度
+  const workItems = timeline.filter(item => item.type === 'work')
+  const educationItems = timeline.filter(item => item.type === 'education')
+  const projectItems = timeline.filter(item => item.type === 'project')
+  
+  // 创建工作经历知识块（包含实习）
+  if (workItems.length > 0) {
+    const workInfo = workItems
+      .map((item) => {
+        const dateRange =
+          item.endDate
+            ? `${item.startDate} 至 ${item.endDate}`
+            : `${item.startDate} 至今`
+        const isInternship = item.title.includes('实习生') || item.title.includes('实习')
+        const typeLabel = isInternship ? '实习经历' : '工作经历'
+        return `
 ${typeLabel}：
 - ${item.title} @ ${item.organization} (${dateRange})
   地点：${item.location || '远程'}
   描述：${item.description}
   ${item.achievements ? `成就：\n${item.achievements.map(a => `  - ${a}`).join('\n')}` : ''}
   技术栈：${item.technologies?.join(', ') || ''}
-      `.trim()
+        `.trim()
+      })
+      .join('\n\n')
+    
+    chunks.push({
+      id: 'timeline-work',
+      content: workInfo,
+      metadata: {
+        type: 'timeline',
+        title: '工作经历和实习经历',
+      },
     })
-    .join('\n\n')
+  }
+  
+  // 创建教育经历知识块
+  if (educationItems.length > 0) {
+    const educationInfo = educationItems
+      .map((item) => {
+        const dateRange =
+          item.endDate
+            ? `${item.startDate} 至 ${item.endDate}`
+            : `${item.startDate} 至今`
+        return `
+教育经历：
+- ${item.title} @ ${item.organization} (${dateRange})
+  地点：${item.location || '远程'}
+  描述：${item.description}
+  ${item.achievements ? `成就：\n${item.achievements.map(a => `  - ${a}`).join('\n')}` : ''}
+  技术栈：${item.technologies?.join(', ') || ''}
+        `.trim()
+      })
+      .join('\n\n')
+    
+    chunks.push({
+      id: 'timeline-education',
+      content: educationInfo,
+      metadata: {
+        type: 'timeline',
+        title: '教育经历',
+      },
+    })
+  }
+  
+  // 创建项目经历知识块（如果 timeline 中有项目类型）
+  if (projectItems.length > 0) {
+    const projectInfo = projectItems
+      .map((item) => {
+        const dateRange =
+          item.endDate
+            ? `${item.startDate} 至 ${item.endDate}`
+            : `${item.startDate} 至今`
+        return `
+项目经历：
+- ${item.title} @ ${item.organization} (${dateRange})
+  地点：${item.location || '远程'}
+  描述：${item.description}
+  ${item.achievements ? `成就：\n${item.achievements.map(a => `  - ${a}`).join('\n')}` : ''}
+  技术栈：${item.technologies?.join(', ') || ''}
+        `.trim()
+      })
+      .join('\n\n')
+    
+    chunks.push({
+      id: 'timeline-project',
+      content: projectInfo,
+      metadata: {
+        type: 'timeline',
+        title: '项目经历',
+      },
+    })
+  }
+  
+  return chunks
+}
 
-  chunks.push({
-    id: 'timeline-info',
-    content: timelineInfo,
-    metadata: {
-      type: 'timeline',
-      title: '经历时间线',
-    },
-  })
-
-  // 4. 项目详情（从 portfolio 页面）
+/**
+ * 创建项目详情知识块
+ */
+async function createProjectChunks(): Promise<KnowledgeChunk[]> {
+  const chunks: KnowledgeChunk[] = []
+  
   try {
     const projects = getAllProjects()
     console.log(`✓ 找到 ${projects.length} 个项目`)
@@ -128,7 +217,15 @@ ${project.demoUrl ? `Demo：${project.demoUrl}` : ''}
     console.warn(`⚠ 项目信息读取失败: ${error.message || error}`)
   }
 
-  // 5. Notion 博文
+  return chunks
+}
+
+/**
+ * 创建 Notion 博文知识块
+ */
+async function createBlogChunks(): Promise<KnowledgeChunk[]> {
+  const chunks: KnowledgeChunk[] = []
+  
   try {
     const posts = await getPublishedPosts()
     console.log(`✓ 找到 ${posts.length} 篇 Notion 博文`)
@@ -143,9 +240,8 @@ ${project.demoUrl ? `Demo：${project.demoUrl}` : ''}
 
         const blogContent = `
 博文标题：${post.title}
-发布时间：${post.publishedAt}
+发布时间：${post.publishedDate || '未知'}
 标签：${post.tags?.join(', ') || '无'}
-摘要：${post.excerpt || ''}
 
 正文内容：
 ${content}
@@ -156,7 +252,7 @@ ${content}
           content: blogContent,
           metadata: {
             type: 'blog',
-            source: `/blog/${post.slug}`,
+            source: `/blog/${post.id}`,
             title: post.title,
           },
         })
@@ -171,6 +267,95 @@ ${content}
     console.warn('提示：这不会影响其他知识库内容的初始化，可以稍后重试')
     // Notion 失败不影响其他数据，继续处理
   }
+
+  return chunks
+}
+
+/**
+ * 创建 GitHub 仓库知识块
+ * 已禁用：只保留作品集项目，不存储 GitHub 仓库数据
+ * 如需启用，请取消注释此函数并在 buildKnowledgeBase 中调用
+ */
+// async function createGithubChunks(): Promise<KnowledgeChunk[]> {
+//   const chunks: KnowledgeChunk[] = []
+//   
+//   try {
+//     const githubUsername = process.env.GITHUB_USERNAME || 'xixloveixixi'
+//     const githubToken = process.env.GITHUB_TOKEN
+//
+//     console.log(`开始获取 GitHub 仓库信息 (用户: ${githubUsername})...`)
+//
+//     const repos = await getUserRepos(githubUsername, githubToken)
+//     console.log(`✓ 找到 ${repos.length} 个 GitHub 仓库`)
+//
+//     const reposToProcess = repos.slice(0, 10)
+//
+//     for (const repo of reposToProcess) {
+//       try {
+//         const [owner, repoName] = repo.full_name.split('/')
+//         const repoInfo = await getRepoFullInfo(owner, repoName, githubToken)
+//
+//         const repoContent = `
+// GitHub 仓库：${repo.full_name}
+// 仓库链接：${repo.html_url}
+// 描述：${repo.description || '无描述'}
+// 主要语言：${repo.language || '未指定'}
+// 标签：${repo.topics?.join(', ') || '无'}
+// ⭐ 星标数：${repo.stargazers_count}
+// 最后更新：${repo.updated_at}
+//
+// ${repoInfo.readme ? `README 内容：\n${repoInfo.readme}\n` : ''}
+//
+// ${repoInfo.mainFiles.length > 0 ? `主要代码文件：\n${repoInfo.mainFiles.map(f => `\n文件路径：${f.path}\n${f.content.substring(0, 2000)}...`).join('\n\n---\n')}` : ''}
+//         `.trim()
+//
+//         chunks.push({
+//           id: `github-${repo.full_name}`,
+//           content: repoContent,
+//           metadata: {
+//             type: 'project',
+//             source: repo.html_url,
+//             title: repo.full_name,
+//           },
+//         })
+//       } catch (repoError) {
+//         console.warn(`⚠ 获取仓库 "${repo.full_name}" 信息失败，跳过`)
+//       }
+//     }
+//
+//     console.log(`✓ GitHub 仓库处理完成，共添加 ${chunks.filter(c => c.metadata.source?.includes('github.com')).length} 个仓库`)
+//   } catch (error: any) {
+//     console.warn(`⚠ GitHub API 调用失败，跳过仓库内容: ${error.message || error}`)
+//   }
+//
+//   return chunks
+// }
+
+/**
+ * 构建完整的知识库内容
+ * 基于 Hello-Agents 的多源数据整合思想
+ */
+export async function buildKnowledgeBase(): Promise<KnowledgeChunk[]> {
+  const chunks: KnowledgeChunk[] = []
+
+  // 1. 个人信息（硬编码）
+  chunks.push(createPersonalInfoChunk())
+
+  // 2. 技能信息（JSON 文件）
+  chunks.push(...createSkillsChunks(skillsData))
+
+  // 3. 时间线经历（教育 + 工作 + 项目）
+  chunks.push(...createTimelineChunks(timelineData))
+
+  // 4. 项目详情（portfolio 数据）
+  chunks.push(...await createProjectChunks())
+
+  // 5. Notion 博文（通过 API 获取）
+  chunks.push(...await createBlogChunks())
+
+  // 注意：GitHub 仓库信息已移除，只保留作品集项目
+  // 如果需要添加 GitHub 仓库，可以取消注释下面的代码
+  // chunks.push(...await createGithubChunks())
 
   return chunks
 }

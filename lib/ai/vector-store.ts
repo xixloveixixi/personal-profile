@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js'
-import { KnowledgeChunk } from './knowledge-base'
 
 // Supabase 客户端
 const supabaseUrl = process.env.SUPABASE_URL!
@@ -91,13 +90,23 @@ export interface VectorChunkInput {
 }
 
 /**
- * 存储向量到数据库
+ * 延迟函数（避免 API 限流）
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+/**
+ * 存储向量到数据库（带批处理和错误处理）
+ * 基于 Hello-Agents 的可靠性设计
  */
 export async function storeVectors(chunks: VectorChunkInput[]) {
   console.log(`开始生成并存储 ${chunks.length} 个向量...`)
 
-  // 为每个 chunk 生成向量
+  // 1. 为每个 chunk 生成向量（带错误处理）
   const vectors = []
+  const failedChunks: string[] = []
+
   for (let i = 0; i < chunks.length; i++) {
     const chunk = chunks[i]
     try {
@@ -108,34 +117,119 @@ export async function storeVectors(chunks: VectorChunkInput[]) {
         embedding,
         metadata: chunk.metadata,
       })
-      console.log(`✓ 完成 ${i + 1}/${chunks.length}: ${chunk.id}`)
-    } catch (error) {
-      console.error(`✗ 失败 ${chunk.id}:`, error)
+      console.log(`✓ [${i + 1}/${chunks.length}] 生成向量: ${chunk.id}`)
+      
+      // 添加延迟，避免 API 限流（每 10 个延迟一次）
+      if ((i + 1) % 10 === 0) {
+        await sleep(500)
+      }
+    } catch (error: any) {
+      console.error(`✗ [${i + 1}/${chunks.length}] 生成向量失败 ${chunk.id}:`, error.message)
+      failedChunks.push(chunk.id)
+      // 单个失败不影响其他，继续处理
     }
   }
 
-  console.log(`成功生成 ${vectors.length} 个向量，开始存储到数据库...`)
-
-  // 使用 RPC 函数批量插入
-  for (let i = 0; i < vectors.length; i++) {
-    const v = vectors[i]
-    
-    const { error } = await supabase.rpc('insert_vector', {
-      p_content: v.content,
-      p_embedding: v.embedding,
-      p_id: v.id,
-      p_metadata: v.metadata,
-    })
-
-    if (error) {
-      console.error(`Error storing vector ${v.id}:`, error)
-      throw error
-    }
-    
-    console.log(`✓ 已存储 ${i + 1}/${vectors.length}: ${v.id}`)
+  if (vectors.length === 0) {
+    throw new Error('所有向量生成都失败了，无法继续存储')
   }
-  
-  console.log('✓ 所有向量存储完成！')
+
+  console.log(`成功生成 ${vectors.length}/${chunks.length} 个向量，开始存储到数据库...`)
+  if (failedChunks.length > 0) {
+    console.warn(`⚠ 有 ${failedChunks.length} 个 chunk 的向量生成失败: ${failedChunks.join(', ')}`)
+  }
+
+  // 2. 批量存储到数据库（真正的批处理）
+  const BATCH_SIZE = 10 // 每批插入 10 个
+  const storedIds: string[] = []
+  const failedStores: string[] = []
+
+  for (let i = 0; i < vectors.length; i += BATCH_SIZE) {
+    const batch = vectors.slice(i, i + BATCH_SIZE)
+    
+    try {
+      // 尝试批量插入
+      const batchData = batch.map((v) => ({
+        id: v.id,
+        content: v.content,
+        embedding: v.embedding,
+        metadata: v.metadata,
+      }))
+
+      // 使用 Supabase 的批量插入
+      const { data, error } = await supabase
+        .from('knowledge_vectors')
+        .insert(batchData)
+        .select('id')
+
+      if (error) {
+        // 如果批量插入失败，降级到逐个插入
+        console.warn(`批量插入失败，降级到逐个插入:`, error.message)
+        
+        for (const v of batch) {
+          try {
+            const { error: singleError } = await supabase
+              .from('knowledge_vectors')
+              .insert({
+                id: v.id,
+                content: v.content,
+                embedding: v.embedding,
+                metadata: v.metadata,
+              })
+
+            if (singleError) {
+              console.error(`✗ 存储失败 ${v.id}:`, singleError.message)
+              failedStores.push(v.id)
+            } else {
+              storedIds.push(v.id)
+              console.log(`✓ 已存储: ${v.id}`)
+            }
+          } catch (singleErr: any) {
+            console.error(`✗ 存储异常 ${v.id}:`, singleErr.message)
+            failedStores.push(v.id)
+          }
+        }
+      } else {
+        // 批量插入成功
+        const insertedIds = data?.map((d) => d.id) || []
+        storedIds.push(...insertedIds)
+        console.log(`✓ [${i + 1}-${Math.min(i + BATCH_SIZE, vectors.length)}/${vectors.length}] 批量存储成功`)
+      }
+
+      // 批次间延迟，避免数据库压力
+      if (i + BATCH_SIZE < vectors.length) {
+        await sleep(200)
+      }
+    } catch (batchError: any) {
+      console.error(`批次 ${i + 1}-${i + BATCH_SIZE} 存储失败:`, batchError.message)
+      // 记录失败的批次
+      batch.forEach((v) => failedStores.push(v.id))
+    }
+  }
+
+  // 3. 结果统计
+  console.log('\n=== 存储完成统计 ===')
+  console.log(`✓ 成功存储: ${storedIds.length}/${vectors.length}`)
+  if (failedChunks.length > 0) {
+    console.log(`⚠ 向量生成失败: ${failedChunks.length} 个`)
+  }
+  if (failedStores.length > 0) {
+    console.log(`⚠ 存储失败: ${failedStores.length} 个`)
+    console.warn(`失败的 ID: ${failedStores.join(', ')}`)
+  }
+  console.log('===================\n')
+
+  if (storedIds.length === 0) {
+    throw new Error('所有向量存储都失败了')
+  }
+
+  return {
+    total: chunks.length,
+    generated: vectors.length,
+    stored: storedIds.length,
+    failedGeneration: failedChunks.length,
+    failedStorage: failedStores.length,
+  }
 }
 
 /**
@@ -235,6 +329,13 @@ async function searchByText(
       if (queryLower.includes('学校') || queryLower.includes('毕业') || queryLower.includes('专业')) {
         if (item.metadata?.type === 'personal' || item.metadata?.type === 'education') {
           typeBoost = 1.5
+        }
+      } else if (queryLower.includes('联系方式') || queryLower.includes('联系') || queryLower.includes('电话') || 
+                 queryLower.includes('email') || queryLower.includes('邮箱') || queryLower.includes('github') ||
+                 queryLower.includes('个人信息') || queryLower.includes('个人简介') || queryLower.includes('简介')) {
+        // 联系方式查询：大幅提升个人信息类型的权重
+        if (item.metadata?.type === 'personal') {
+          typeBoost = 2.0 // 更高的权重，确保个人信息优先返回
         }
       } else if (queryLower.includes('项目') || queryLower.includes('作品')) {
         if (item.metadata?.type === 'project') {

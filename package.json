@@ -34,7 +34,8 @@
     "react-dom": "^18.3.0",
     "react-markdown": "^9.0.1",
     "rehype-highlight": "^7.0.0",
-    "socks-proxy-agent": "^8.0.5"
+    "socks-proxy-agent": "^8.0.5",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@babel/plugin-bugfix-firefox-class-in-computed-class-key": "^7.27.1",

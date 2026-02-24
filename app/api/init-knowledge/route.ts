@@ -1,11 +1,21 @@
 import { buildKnowledgeBase, splitIntoChunks } from '@/lib/ai/knowledge-base'
-import { storeVectors } from '@/lib/ai/vector-store'
+import { storeVectors, clearAllVectors } from '@/lib/ai/vector-store'
 import { NextResponse } from 'next/server'
 
 async function initKnowledge() {
   console.log('开始构建知识库...')
   
   try {
+    // 0. 先清空现有数据（避免重复键错误）
+    console.log('清空现有知识库数据...')
+    try {
+      await clearAllVectors()
+      console.log('✓ 已清空现有数据')
+    } catch (clearError: any) {
+      console.warn('⚠ 清空数据时出错（可能表为空）:', clearError.message)
+      // 继续执行，不影响初始化
+    }
+    
     // 1. 构建知识库内容
     const chunks = await buildKnowledgeBase()
     console.log(`✓ 收集到 ${chunks.length} 个知识块`)
@@ -58,15 +68,19 @@ async function initKnowledge() {
     }
 
     console.log('开始存储向量到数据库...')
-    await storeVectors(vectorChunks)
+    const storageStats = await storeVectors(vectorChunks)
     console.log('✓ 知识库初始化完成！')
 
     return {
       success: true,
-      message: `知识库初始化完成！共存储 ${vectorChunks.length} 个向量`,
+      message: `知识库初始化完成！共存储 ${storageStats.stored}/${storageStats.generated} 个向量`,
       stats: {
         totalChunks: chunks.length,
         totalVectors: vectorChunks.length,
+        generated: storageStats.generated,
+        stored: storageStats.stored,
+        failedGeneration: storageStats.failedGeneration,
+        failedStorage: storageStats.failedStorage,
         byType: chunks.reduce((acc, chunk) => {
           const type = chunk.metadata.type
           acc[type] = (acc[type] || 0) + 1
