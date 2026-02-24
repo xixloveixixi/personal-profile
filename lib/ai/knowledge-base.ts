@@ -86,33 +86,31 @@ function createTimelineChunks(timeline: typeof timelineData): KnowledgeChunk[] {
   const educationItems = timeline.filter(item => item.type === 'education')
   const projectItems = timeline.filter(item => item.type === 'project')
   
-  // 创建工作经历知识块（包含实习）
-  if (workItems.length > 0) {
-    const workInfo = workItems
-      .map((item) => {
-        const dateRange =
-          item.endDate
-            ? `${item.startDate} 至 ${item.endDate}`
-            : `${item.startDate} 至今`
-        const isInternship = item.title.includes('实习生') || item.title.includes('实习')
-        const typeLabel = isInternship ? '实习经历' : '工作经历'
-        return `
+  // 创建工作经历知识块（每个经历独立，提高搜索精度）
+  for (const item of workItems) {
+    const dateRange = item.endDate
+      ? `${item.startDate} 至 ${item.endDate}`
+      : `${item.startDate} 至今`
+    const isInternship = item.title.includes('实习生') || item.title.includes('实习')
+    const typeLabel = isInternship ? '实习经历' : '工作经历'
+    
+    const workInfo = `
 ${typeLabel}：
 - ${item.title} @ ${item.organization} (${dateRange})
   地点：${item.location || '远程'}
   描述：${item.description}
   ${item.achievements ? `成就：\n${item.achievements.map(a => `  - ${a}`).join('\n')}` : ''}
   技术栈：${item.technologies?.join(', ') || ''}
-        `.trim()
-      })
-      .join('\n\n')
+    `.trim()
     
     chunks.push({
-      id: 'timeline-work',
+      id: `timeline-work-${item.id}`,
       content: workInfo,
       metadata: {
         type: 'timeline',
-        title: '工作经历和实习经历',
+        title: `${typeLabel} - ${item.organization}`,
+        organization: item.organization,
+        isInternship,
       },
     })
   }

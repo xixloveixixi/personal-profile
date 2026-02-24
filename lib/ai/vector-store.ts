@@ -1,9 +1,21 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-// Supabase 客户端
-const supabaseUrl = process.env.SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+// Supabase 客户端（延迟初始化，避免构建时缺少环境变量导致报错）
+let _supabase: SupabaseClient | null = null
+
+function getSupabase(): SupabaseClient {
+  if (!_supabase) {
+    const supabaseUrl = process.env.SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error(
+        '缺少 Supabase 环境变量。请在 Vercel 项目设置中配置 SUPABASE_URL 和 SUPABASE_SERVICE_ROLE_KEY'
+      )
+    }
+    _supabase = createClient(supabaseUrl, supabaseServiceKey)
+  }
+  return _supabase
+}
 
 /**
  * 使用阿里云生成向量嵌入
@@ -157,7 +169,7 @@ export async function storeVectors(chunks: VectorChunkInput[]) {
       }))
 
       // 使用 Supabase 的批量插入
-      const { data, error } = await supabase
+      const { data, error } = await getSupabase()
         .from('knowledge_vectors')
         .insert(batchData)
         .select('id')
@@ -168,7 +180,7 @@ export async function storeVectors(chunks: VectorChunkInput[]) {
         
         for (const v of batch) {
           try {
-            const { error: singleError } = await supabase
+            const { error: singleError } = await getSupabase()
               .from('knowledge_vectors')
               .insert({
                 id: v.id,
@@ -254,7 +266,7 @@ export async function storeTextOnly(chunks: VectorChunkInput[]) {
         metadata: chunk.metadata,
       }))
 
-      const { data, error } = await supabase
+      const { data, error } = await getSupabase()
         .from('knowledge_vectors')
         .insert(batchData)
         .select('id')
@@ -264,7 +276,7 @@ export async function storeTextOnly(chunks: VectorChunkInput[]) {
         
         for (const chunk of batch) {
           try {
-            const { error: singleError } = await supabase
+            const { error: singleError } = await getSupabase()
               .from('knowledge_vectors')
               .insert({
                 id: chunk.id,
@@ -322,14 +334,14 @@ export async function storeTextOnly(chunks: VectorChunkInput[]) {
  */
 export async function searchSimilarVectors(
   query: string,
-  limit = 5
+  limit = 10
 ): Promise<Array<{ content: string; metadata: any; similarity: number }>> {
   try {
     // 生成查询向量
     const queryEmbedding = await generateEmbedding(query)
     
     // 使用 RPC 函数进行向量搜索
-    const { data, error } = await supabase.rpc('match_knowledge', {
+    const { data, error } = await getSupabase().rpc('match_knowledge', {
       query_embedding: queryEmbedding,
       match_threshold: 0.0,  // 降低阈值，返回所有结果
       match_count: limit,
@@ -358,7 +370,7 @@ async function searchByText(
   console.log('使用文本搜索（向量不可用）...')
   
   // 获取所有文本内容
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('knowledge_vectors')
     .select('content, metadata')
     .limit(100) // 限制查询数量
@@ -376,7 +388,7 @@ async function searchByText(
   const synonymMap: Record<string, string[]> = {
     '学校': ['大学', '院校', '高校', '毕业', '就读', '教育'],
     '项目': ['作品', '作品集', '开发', '开发项目', '项目经验', '项目经历'],
-    '实习': ['工作', '工作经历', '工作经验', '公司'],
+    '实习': ['工作', '工作经历', '工作经验', '公司', '实习经历', '实习经验', '实习生', '维搭', '莉莉丝'],
     '技能': ['技术', '能力', '擅长', '掌握'],
     '专业': ['学科', '方向', '领域'],
   }
@@ -449,6 +461,6 @@ async function searchByText(
  * 清空所有向量
  */
 export async function clearAllVectors() {
-  const { error } = await supabase.from('knowledge_vectors').delete().neq('id', '')
+  const { error } = await getSupabase().from('knowledge_vectors').delete().neq('id', '')
   if (error) throw error
 }

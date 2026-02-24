@@ -1,7 +1,20 @@
 import { searchSimilarVectors } from '@/lib/ai/vector-store'
 
+// 环境变量检查
+function checkEnvVars() {
+  const required = ['DEEPSEEK_API_KEY', 'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'ALIBABA_API_KEY']
+  const missing = required.filter(key => !process.env[key])
+  
+  if (missing.length > 0) {
+    throw new Error(`缺少环境变量: ${missing.join(', ')}`)
+  }
+}
+
 export async function POST(req: Request) {
   try {
+    // 检查环境变量
+    checkEnvVars()
+    
     const { messages } = await req.json()
 
     if (!messages || messages.length === 0) {
@@ -13,7 +26,12 @@ export async function POST(req: Request) {
     // 1. 向量检索相关上下文
     let context = ''
     try {
-      const similarChunks = await searchSimilarVectors(userMessage, 3)
+      const similarChunks = await searchSimilarVectors(userMessage, 10)
+      console.log(`[Chat API] 找到 ${similarChunks.length} 个相关chunks`)
+      similarChunks.forEach((chunk, i) => {
+        console.log(`  [${i}] ${chunk.metadata.title || chunk.metadata.type} (相似度: ${chunk.similarity?.toFixed(3) || 'N/A'})`)
+      })
+      
       if (similarChunks.length > 0) {
         context = similarChunks
           .map((chunk) => `[来源: ${chunk.metadata.title || chunk.metadata.type}]\n${chunk.content}`)
@@ -26,14 +44,15 @@ export async function POST(req: Request) {
     // 2. 构建系统提示词
     const systemPrompt = `你是阿菥的个人AI助手。你的任务是基于以下知识库信息，友好、准确地回答关于阿菥的问题。
 
-${context ? `相关上下文信息：\n${context}\n\n` : ''}
+${context ? `相关上下文信息（可能包含多个相关内容，请仔细阅读所有信息）：\n${context}\n\n` : ''}
 
 回答要求：
 1. 基于提供的上下文信息回答，不要编造信息
-2. 如果问题超出知识库范围，礼貌地说明
-3. 语气友好、自然，像朋友聊天一样
-4. 可以适当补充一些合理的建议或观点
-5. 用中文回答
+2. **重要：如果上下文包含多个相关信息（如多段实习经历、多个项目等），请全部列出，不要遗漏**
+3. 如果问题超出知识库范围，礼貌地说明
+4. 语气友好、自然，像朋友聊天一样
+5. 可以适当补充一些合理的建议或观点
+6. 用中文回答
 
 如果用户问的问题在知识库中没有相关信息，你可以说："这个问题超出了我的知识范围，但你可以通过以下方式了解更多：
 - 查看我的项目作品集
@@ -147,8 +166,17 @@ ${context ? `相关上下文信息：\n${context}\n\n` : ''}
     
   } catch (error: any) {
     console.error('Chat API error:', error)
+    
+    // 详细的错误信息（仅在开发环境显示完整堆栈）
+    const errorMessage = error.message || 'Internal server error'
+    const errorDetails = process.env.NODE_ENV === 'development' ? error.stack : undefined
+    
     return new Response(
-      JSON.stringify({ error: error.message || 'Internal server error' }), 
+      JSON.stringify({ 
+        error: errorMessage,
+        details: errorDetails,
+        timestamp: new Date().toISOString()
+      }), 
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     )
   }

@@ -1,9 +1,22 @@
 import { searchSimilarVectors } from './vector-store'
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+// Supabase 客户端（延迟初始化，避免构建时缺少环境变量导致报错）
+let _supabase: SupabaseClient | null = null
+
+function getSupabase(): SupabaseClient {
+  if (!_supabase) {
+    const supabaseUrl = process.env.SUPABASE_URL
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (!supabaseUrl || !supabaseServiceKey) {
+      throw new Error(
+        '缺少 Supabase 环境变量。请在 Vercel 项目设置中配置 SUPABASE_URL 和 SUPABASE_SERVICE_ROLE_KEY'
+      )
+    }
+    _supabase = createClient(supabaseUrl, supabaseServiceKey)
+  }
+  return _supabase
+}
 
 /**
  * 混合搜索：向量搜索 + 关键词搜索 + 子查询
@@ -138,7 +151,7 @@ async function searchByKeywords(
   const keywords = queryLower.split(/\s+/).filter(w => w.length > 0)
   
   // 获取所有内容
-  const { data, error } = await supabase
+  const { data, error } = await getSupabase()
     .from('knowledge_vectors')
     .select('content, metadata')
     .limit(100)
