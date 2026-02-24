@@ -272,66 +272,6 @@ ${content}
 }
 
 /**
- * 创建 GitHub 仓库知识块
- * 已禁用：只保留作品集项目，不存储 GitHub 仓库数据
- * 如需启用，请取消注释此函数并在 buildKnowledgeBase 中调用
- */
-// async function createGithubChunks(): Promise<KnowledgeChunk[]> {
-//   const chunks: KnowledgeChunk[] = []
-//   
-//   try {
-//     const githubUsername = process.env.GITHUB_USERNAME || 'xixloveixixi'
-//     const githubToken = process.env.GITHUB_TOKEN
-//
-//     console.log(`开始获取 GitHub 仓库信息 (用户: ${githubUsername})...`)
-//
-//     const repos = await getUserRepos(githubUsername, githubToken)
-//     console.log(`✓ 找到 ${repos.length} 个 GitHub 仓库`)
-//
-//     const reposToProcess = repos.slice(0, 10)
-//
-//     for (const repo of reposToProcess) {
-//       try {
-//         const [owner, repoName] = repo.full_name.split('/')
-//         const repoInfo = await getRepoFullInfo(owner, repoName, githubToken)
-//
-//         const repoContent = `
-// GitHub 仓库：${repo.full_name}
-// 仓库链接：${repo.html_url}
-// 描述：${repo.description || '无描述'}
-// 主要语言：${repo.language || '未指定'}
-// 标签：${repo.topics?.join(', ') || '无'}
-// ⭐ 星标数：${repo.stargazers_count}
-// 最后更新：${repo.updated_at}
-//
-// ${repoInfo.readme ? `README 内容：\n${repoInfo.readme}\n` : ''}
-//
-// ${repoInfo.mainFiles.length > 0 ? `主要代码文件：\n${repoInfo.mainFiles.map(f => `\n文件路径：${f.path}\n${f.content.substring(0, 2000)}...`).join('\n\n---\n')}` : ''}
-//         `.trim()
-//
-//         chunks.push({
-//           id: `github-${repo.full_name}`,
-//           content: repoContent,
-//           metadata: {
-//             type: 'project',
-//             source: repo.html_url,
-//             title: repo.full_name,
-//           },
-//         })
-//       } catch (repoError) {
-//         console.warn(`⚠ 获取仓库 "${repo.full_name}" 信息失败，跳过`)
-//       }
-//     }
-//
-//     console.log(`✓ GitHub 仓库处理完成，共添加 ${chunks.filter(c => c.metadata.source?.includes('github.com')).length} 个仓库`)
-//   } catch (error: any) {
-//     console.warn(`⚠ GitHub API 调用失败，跳过仓库内容: ${error.message || error}`)
-//   }
-//
-//   return chunks
-// }
-
-/**
  * 构建完整的知识库内容
  * 基于 Hello-Agents 的多源数据整合思想
  */
@@ -352,10 +292,6 @@ export async function buildKnowledgeBase(): Promise<KnowledgeChunk[]> {
 
   // 5. Notion 博文（通过 API 获取）
   chunks.push(...await createBlogChunks())
-
-  // 注意：GitHub 仓库信息已移除，只保留作品集项目
-  // 如果需要添加 GitHub 仓库，可以取消注释下面的代码
-  // chunks.push(...await createGithubChunks())
 
   return chunks
 }

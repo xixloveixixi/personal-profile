@@ -17,7 +17,7 @@ export interface Tool {
 
 /**
  * 格式化搜索结果
- * 优先展示作品集项目，过滤掉 GitHub 仓库（除非明确搜索 GitHub）
+ * 优先展示作品集项目
  */
 function formatSearchResults(
   results: Array<{ content: string; metadata: any; similarity: number }>,
@@ -27,41 +27,27 @@ function formatSearchResults(
     return '未找到相关信息'
   }
 
-  // 如果查询明确包含 "github" 或 "仓库"，保留所有结果
-  // 否则优先展示作品集项目，过滤掉 GitHub 仓库
-  const queryLower = (query || '').toLowerCase()
-  const includeGithub = queryLower.includes('github') || queryLower.includes('仓库') || queryLower.includes('repo')
-  
-  // 分离作品集项目和 GitHub 仓库
+  // 分离作品集项目和其他内容
   const portfolioProjects: Array<{ content: string; metadata: any; similarity: number }> = []
-  const githubRepos: Array<{ content: string; metadata: any; similarity: number }> = []
   const others: Array<{ content: string; metadata: any; similarity: number }> = []
   
   for (const result of results) {
     const source = result.metadata?.source || ''
     if (source.includes('/portfolio/')) {
       portfolioProjects.push(result)
-    } else if (source.includes('github.com')) {
-      githubRepos.push(result)
     } else {
       others.push(result)
     }
   }
   
-  // 如果查询不是明确搜索 GitHub，优先返回作品集项目
-  let finalResults = includeGithub 
-    ? [...portfolioProjects, ...others, ...githubRepos]
-    : [...portfolioProjects, ...others]
-  
-  // 如果作品集项目为空，但查询包含"项目"，则也包含 GitHub 仓库
-  if (portfolioProjects.length === 0 && queryLower.includes('项目')) {
-    finalResults = [...others, ...githubRepos]
-  }
+  // 优先返回作品集项目
+  let finalResults = [...portfolioProjects, ...others]
   
   // 限制结果数量（如果查询包含"所有"、"全部"，使用更大的限制）
+  const queryLower = (query || '').toLowerCase()
   const isAllQuery = (queryLower.includes('所有') || queryLower.includes('全部') || queryLower.includes('还有')) && 
                      (queryLower.includes('项目') || queryLower.includes('作品'))
-  const maxResults = isAllQuery ? 20 : 5 // 如果是"所有项目"查询，返回最多20个结果
+  const maxResults = isAllQuery ? 20 : 5
   finalResults = finalResults.slice(0, maxResults)
 
   return finalResults
@@ -71,10 +57,8 @@ function formatSearchResults(
       // 如果是作品集项目，标注为"作品集项目"
       const sourceLabel = sourceUrl.includes('/portfolio/') 
         ? `作品集项目: ${source}` 
-        : sourceUrl.includes('github.com')
-        ? `GitHub 仓库: ${source}`
-        : source
-      return `[${index + 1}] 来源: ${sourceLabel}\n相似度: ${(result.similarity * 100).toFixed(1)}%\n内容: ${result.content}\n`
+        : `来源: ${source}`
+      return `[${index + 1}] ${sourceLabel}\n相似度: ${(result.similarity * 100).toFixed(1)}%\n内容: ${result.content}\n`
     })
     .join('\n---\n\n')
 }
@@ -231,11 +215,12 @@ export function parseToolParams(rawParams: string): Record<string, any> {
 
     while ((match = regex.exec(rawParams)) !== null) {
       const key = match[1]
-      let value = match[2]
+      const stringValue = match[2]
 
       // 尝试转换为数字
-      if (!isNaN(Number(value))) {
-        value = Number(value)
+      let value: string | number = stringValue
+      if (!isNaN(Number(stringValue))) {
+        value = Number(stringValue)
       }
 
       params[key] = value

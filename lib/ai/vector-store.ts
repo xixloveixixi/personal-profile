@@ -233,6 +233,91 @@ export async function storeVectors(chunks: VectorChunkInput[]) {
 }
 
 /**
+ * 只存储文本内容（不生成向量）
+ * 用于 SKIP_EMBEDDING=true 的情况
+ */
+export async function storeTextOnly(chunks: VectorChunkInput[]) {
+  console.log(`开始存储 ${chunks.length} 个文本块（不生成向量）...`)
+
+  const BATCH_SIZE = 10
+  const storedIds: string[] = []
+  const failedStores: string[] = []
+
+  for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+    const batch = chunks.slice(i, i + BATCH_SIZE)
+    
+    try {
+      const batchData = batch.map((chunk) => ({
+        id: chunk.id,
+        content: chunk.content,
+        embedding: null, // 不生成向量，设置为 null
+        metadata: chunk.metadata,
+      }))
+
+      const { data, error } = await supabase
+        .from('knowledge_vectors')
+        .insert(batchData)
+        .select('id')
+
+      if (error) {
+        console.warn(`批量插入失败，降级到逐个插入:`, error.message)
+        
+        for (const chunk of batch) {
+          try {
+            const { error: singleError } = await supabase
+              .from('knowledge_vectors')
+              .insert({
+                id: chunk.id,
+                content: chunk.content,
+                embedding: null,
+                metadata: chunk.metadata,
+              })
+
+            if (singleError) {
+              console.error(`✗ 存储失败 ${chunk.id}:`, singleError.message)
+              failedStores.push(chunk.id)
+            } else {
+              storedIds.push(chunk.id)
+            }
+          } catch (singleErr: any) {
+            console.error(`✗ 存储异常 ${chunk.id}:`, singleErr.message)
+            failedStores.push(chunk.id)
+          }
+        }
+      } else {
+        const insertedIds = data?.map((d) => d.id) || []
+        storedIds.push(...insertedIds)
+        console.log(`✓ [${i + 1}-${Math.min(i + BATCH_SIZE, chunks.length)}/${chunks.length}] 批量存储成功`)
+      }
+
+      if (i + BATCH_SIZE < chunks.length) {
+        await sleep(200)
+      }
+    } catch (batchError: any) {
+      console.error(`批次 ${i + 1}-${i + BATCH_SIZE} 存储失败:`, batchError.message)
+      batch.forEach((chunk) => failedStores.push(chunk.id))
+    }
+  }
+
+  console.log(`\n=== 存储完成统计 ===`)
+  console.log(`✓ 成功存储: ${storedIds.length}/${chunks.length}`)
+  if (failedStores.length > 0) {
+    console.log(`⚠ 存储失败: ${failedStores.length} 个`)
+  }
+  console.log('===================\n')
+
+  if (storedIds.length === 0) {
+    throw new Error('所有文本块存储都失败了')
+  }
+
+  return {
+    total: chunks.length,
+    stored: storedIds.length,
+    failed: failedStores.length,
+  }
+}
+
+/**
  * 向量相似度搜索
  */
 export async function searchSimilarVectors(

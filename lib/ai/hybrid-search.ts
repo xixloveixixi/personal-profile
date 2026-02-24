@@ -33,9 +33,8 @@ export async function hybridSearch(
   const seen = new Set<string>()
   const combined: Array<{ content: string; metadata: any; similarity: number }> = []
   
-  // 分离作品集项目和 GitHub 仓库
+  // 分离作品集项目和其他内容
   const portfolioProjects: Array<{ content: string; metadata: any; similarity: number }> = []
-  const githubRepos: Array<{ content: string; metadata: any; similarity: number }> = []
   const others: Array<{ content: string; metadata: any; similarity: number }> = []
   
   for (const r of [...vectorResults, ...keywordResults]) {
@@ -50,22 +49,15 @@ export async function hybridSearch(
         ...r,
         similarity: r.similarity + 0.3,
       })
-    } else if (source.includes('github.com')) {
-      // GitHub 仓库：降低优先级（相似度 -0.2）
-      githubRepos.push({
-        ...r,
-        similarity: Math.max(0, r.similarity - 0.2),
-      })
     } else {
       others.push(r)
     }
   }
   
-  // 按优先级排序：作品集项目 > 其他 > GitHub 仓库
+  // 按优先级排序：作品集项目 > 其他
   const sorted = [
     ...portfolioProjects.sort((a, b) => b.similarity - a.similarity),
     ...others.sort((a, b) => b.similarity - a.similarity),
-    ...githubRepos.sort((a, b) => b.similarity - a.similarity),
   ]
   
   return sorted.slice(0, limit)
