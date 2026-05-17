@@ -63,17 +63,17 @@
 
 #### Gate E：验证闸门
 
-- [ ] Go 服务能本地启动。
-- [ ] `GET /api/health` 返回成功。
-- [ ] `POST /api/auth/login` 能返回 token。
-- [ ] JWT 中间件能拦截未登录请求并返回 401。
-- [ ] Swagger 能访问，或已用手写接口文档 / Postman 完成验证。
+- [x] Go 服务能本地启动。
+- [x] `GET /api/health` 返回成功。
+- [x] `POST /api/auth/login` 能返回 token。
+- [x] JWT 中间件能拦截未登录请求并返回 401。
+- [x] Swagger 能访问，或已用手写接口文档 / Postman 完成验证。
 
 #### Gate F：沉淀闸门
 
-- [ ] 是否更新 `progress-log.md`？
-- [ ] 是否把踩坑写入 `pitfalls.md`？
-- [ ] 是否明确下一阶段是否可以开始？
+- [x] 是否更新 `progress-log.md`？
+- [x] 是否把踩坑写入 `pitfalls.md`？
+- [x] 是否明确下一阶段是否可以开始？
 
 ## 第一周建议节奏
 
@@ -93,3 +93,24 @@
 - 如果 JWT 卡住：先用固定 owner token 模拟登录态。
 - 如果接口文档卡住：先用 Postman / curl 手测，Swagger 后补。
 - 如果工程结构纠结：先采用 `cmd / internal/handler / internal/service / internal/middleware` 最小结构。
+
+---
+
+## 阶段 2（待定）：公开数据后端化
+
+> 以下为占位，正式启动前需逐项确认并补充 Gate A-F。
+
+### 方向候选
+
+- 把个人信息、项目、技能等公开数据从前端静态数据迁移到 Go API + MySQL。
+- 引入 GORM，建库建表。
+- 实现公开数据 CRUD 接口（只允许 owner 写入，guest 可读）。
+
+### 进入前置条件
+
+- [ ] Stage 1 Gate E/F 全部通过（已完成）。
+- [ ] 确认 MySQL 可用（本机安装或 Docker）。
+- [ ] 确认 Stage 2 目标范围（哪些数据先迁移）。
+- [ ] 确认表结构设计（对齐 SDD 10.x）。
+- [ ] 确认不做的事情（不碰学习数据、不碰 LangChain）。
+
