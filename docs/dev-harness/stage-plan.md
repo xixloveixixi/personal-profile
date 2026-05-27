@@ -8,7 +8,7 @@
 - 每个阶段只学习当前功能所需的最小知识。
 - 卡住超过 2 天时，必须降级方案。
 
-## 当前阶段：阶段 1 Go 后端最小底座
+## 阶段 1 Go 后端最小底座（已完成）
 
 ### 阶段目标
 
@@ -56,7 +56,7 @@
 - [ ] 是否只学习 JWT 中间件基础？
 
 #### Gate D：编码闸门
-
+- [ ] 工具链验证：`go version` / `node -v` / `mysql --version` 已通过
 - [ ] 是否明确新增后端目录位置？
 - [ ] 是否明确不会影响当前 Next.js 公开页面？
 - [ ] 是否明确本阶段验收方式？
@@ -96,21 +96,118 @@
 
 ---
 
-## 阶段 2（待定）：公开数据后端化
+## 当前阶段：阶段 2 公开数据后端化（profile 最小集）
 
-> 以下为占位，正式启动前需逐项确认并补充 Gate A-F。
+### 阶段目标
 
-### 方向候选
+把 4 张公开数据表（`public_profile` / `public_contact` / `public_skill` / `site_config`）从前端静态数据迁移到 Go API + MySQL，跑通 GORM + 一套读写 CRUD 模式，为 Stage 3 前端接入打好基础。
 
-- 把个人信息、项目、技能等公开数据从前端静态数据迁移到 Go API + MySQL。
-- 引入 GORM，建库建表。
-- 实现公开数据 CRUD 接口（只允许 owner 写入，guest 可读）。
+### 本阶段做什么
+
+- Homebrew 本地安装 MySQL 8/9（实际安装 9.6.0），建库建用户。
+- 引入 GORM，封装 DB 连接（DSN 从 env 读）。
+- 在 `docs/dev-harness/schema.md` 冻结 4 张表 DDL，编写 migration（手写 SQL 或 GORM AutoMigrate 二选一）。
+- 在 `docs/dev-harness/api-contract.md` 冻结读写接口契约。
+- 实现公开读接口（guest 可访问）：4 张表的 `GET /api/public/...`。
+- 实现 owner 写接口（JWT + owner role）：4 张表的 `POST/PUT/DELETE /api/admin/...`。
+- 准备种子数据 SQL（从前端静态数据 dump），便于本机/部署环境初始化。
+- 用 curl 完成全接口验证，更新 `backend/docs/api.md`。
+
+### 本阶段不做什么
+
+- 不碰前端：公开页继续读静态数据，前端切 API 留 Stage 3。
+- 不做 `sys_user` 表：登录仍走 Stage 1 硬编码 owner 凭据。
+- 不碰学习数据相关表（SDD 10.9-10.14）。
+- 不接 LangChain / Agent 相关表（10.15-10.17）。
+- 不做后台管理 UI、不做权限分组、不做软删除恢复界面。
+- 不做缓存、不做分页排序高级特性（`GET` 全量返回即可）。
+
+### 闸门检查
+
+#### Gate A：需求闸门
+
+- [x] 是否确认本阶段只做 4 张公开数据表的后端化？
+- [x] 是否确认前端不变、登录不动 `sys_user`？
+- [x] 是否确认验收标准是 curl 全通 + 种子数据可灌入？
+
+#### Gate B：设计闸门
+
+- [x] `docs/dev-harness/schema.md` 中 4 张表 DDL 是否已冻结？
+- [x] `docs/dev-harness/api-contract.md` 中读 + 写接口是否已冻结？
+- [x] DB 连接配置（DSN、连接池上限）是否已确定？
+- [x] migration 方式（手写 SQL vs GORM AutoMigrate）是否已选定？
+- [x] owner 写接口的鉴权策略（JWT + role 字段）是否已明确？
+
+#### Gate C：学习闸门
+
+- [x] 是否只学 GORM 最小 API（`Open` / `AutoMigrate` / `Create` / `First` / `Find` / `Save` / `Delete`）？
+- [x] 是否只学 `database/sql` driver 注册和连接池基础？
+- [x] 是否只学 MySQL 8 本机安装、建库建用户、`mysql -u` 登录？
+
+#### Gate D：编码闸门
+
+- [x] 工具链验证：`go version` / `mysql --version` / `mysql -u root -p` 登录均通过。
+- [x] DB 连接配置项已加入 `internal/config/config.go`，且本地已能 `Ping` 成功。
+- [x] 是否明确新增 package 位置：`internal/repository`（GORM 操作层）、`internal/model`（GORM model 定义）？
+- [x] 是否确认 handler 不直接调 GORM，必须通过 repository？
+- [x] 是否明确本阶段验收方式（curl 全通 + 种子数据可重复灌入）？
+
+#### Gate E：验证闸门
+
+- [x] MySQL 本机服务可启动，库表已建。
+- [x] 全部 4 张表的读接口 curl 返回正确 JSON。
+- [x] 全部 4 张表的写接口需 Bearer Token，无 token 返回 401。
+- [x] 种子 SQL 在空库上一次执行成功，幂等可重复执行。
+- [x] `backend/docs/api.md` 已更新，含新接口的 curl 验证命令。
+
+#### Gate F：沉淀闸门
+
+- [ ] 是否更新 `progress-log.md`？
+- [ ] 是否把踩坑写入 `pitfalls.md`？
+- [ ] 是否同步更新 `schema.md` / `api-contract.md` 的"已冻结"区块？
+- [ ] 是否明确 Stage 3 范围（前端切 API or 引入 sys_user）？
+
+### Stage 2 设计决策（Day 2 冻结）
+
+- **DB 连接配置**：DSN 从 env 读取，键名 `BACKEND_DB_DSN`，默认值 `pp_app:pp_dev_pwd@tcp(127.0.0.1:3306)/personal_profile?charset=utf8mb4&parseTime=True&loc=Local`。`internal/config` 增加 `DB.DSN`、`DB.MaxOpenConns=20`、`DB.MaxIdleConns=5`、`DB.ConnMaxLifetime=1h`。本机开发凭据沿用 Day 1 创建的 `pp_app@localhost / pp_dev_pwd`。
+- **Migration 方式**：采用 **手写 SQL**（`backend/migrations/NNNN_*.sql`），简单顺序号命名，启动时不自动执行；通过本地命令 `mysql -u pp_app -p personal_profile < backend/migrations/0001_init.sql` 灌入。GORM AutoMigrate 仅作开发期辅助，不进 main 启动路径，避免 schema 漂移。
+- **种子数据**：`backend/migrations/seed_*.sql`（与 schema migration 分目录或仅前缀区分），可在空库上重复执行（`INSERT ... ON DUPLICATE KEY UPDATE` 或 `INSERT IGNORE`）。
+- **owner 校验策略**：`/api/admin/*` 接入 Stage 1 已实现的 `JWTAuth` 中间件，仅校验"有效 Token"；不校验 `role` 字段。Stage 3 引入 `sys_user` 后再加 `RequireOwnerRole` 中间件包裹 `/api/admin/*` 路由组。
+- **owner_id 模型**：Stage 2 没有 `sys_user`，所有写入固定 `owner_id = 1`；从 `internal/config` 暴露常量 `OwnerID=1`，handler/repository 不做参数化。
+- **包结构新增**：`internal/model`（GORM model）、`internal/repository`（GORM 操作层）。Handler 不直接调 GORM，必须通过 repository。
+
+### 节奏建议
+
+| 天数 | 目标 | 产出 |
+| --- | --- | --- |
+| Day 1 | 装 MySQL，建库建用户，过 Gate A/B 部分项 | 本机 mysql 可登录 |
+| Day 2 | 冻结 schema.md 4 表 DDL + api-contract.md 接口 | 两份契约文档 |
+| Day 3 | 引入 GORM，封装连接，完成 `public_profile` CRUD | 单表跑通 |
+| Day 4 | 复用模式完成 `public_contact` / `public_skill` | 多表打通 |
+| Day 5 | 完成 `site_config` + 种子 SQL + 路由整合 | 全接口可用 |
+| Day 6 | 鉴权策略落地 + curl 全通 | Gate E 主要项 |
+| Day 7 | 阶段复盘 + 更新文档 | 进入 Stage 3 |
+
+### 降级策略
+
+- 如果 Homebrew 装 MySQL 卡住：切换到 Docker `mysql:8` 镜像。
+- 如果 GORM 学习成本超预期：先用 `database/sql` + `sqlx`，GORM 留 Stage 3。
+- 如果 owner role 字段设计纠结：本阶段所有 `/api/admin/*` 只校验"有效 token"，role 校验留到引入 `sys_user` 时。
+- 如果 migration 方式选不定：先用手写 SQL（`backend/migrations/*.sql`），AutoMigrate 留作纯本地辅助。
 
 ### 进入前置条件
 
-- [ ] Stage 1 Gate E/F 全部通过（已完成）。
-- [ ] 确认 MySQL 可用（本机安装或 Docker）。
-- [ ] 确认 Stage 2 目标范围（哪些数据先迁移）。
-- [ ] 确认表结构设计（对齐 SDD 10.x）。
-- [ ] 确认不做的事情（不碰学习数据、不碰 LangChain）。
+- [x] Stage 1 Gate E/F 全部通过。
+- [x] MySQL 本机可用（Homebrew 安装方式已选定，实际版本 9.6.0）。
+- [x] 范围已确认（4 张表 profile/contact/skill/site_config）。
+- [x] `schema.md` / `api-contract.md` 的 Stage 2 候选清单已按 SDD 10.x / 9.x 填齐为待冻结状态。
+
+---
+
+## 阶段 3（占位）：前端公开页切 API + 引入 sys_user
+
+> 进入前再补 Gate A-F。候选范围：
+> - 前端公开页改读 `/api/public/*`，移除前端静态数据。
+> - 引入 `sys_user` 表，登录从硬编码迁移到 DB。
+> - 后台管理 UI（最小可用）。
 

@@ -10,6 +10,7 @@
     "type-check": "tsc --noEmit",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "publish:juejin": "npx ts-node scripts/publish-juejin.ts",
+    "harness:check": "node scripts/harness-check.js",
     "init:knowledge": "curl -X POST http://localhost:3000/api/init-knowledge || echo '请先运行 npm run dev，然后在浏览器访问 http://localhost:3000/api/init-knowledge 或使用 curl 命令'"
   },
   "dependencies": {

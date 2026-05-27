@@ -1,4 +1,8 @@
 # 研发 Harness 踩坑记录
+## 索引
+- 流程类：范围控制、学习发散、文档同步、阶段切换标题、Gate C 勾选权
+- Go 工程：go.mod 位置、GOPROXY、response 包
+- 工具链：进入新栈前置检查、MySQL formula 版本
 
 ## 使用原则
 
@@ -145,6 +149,29 @@ go env -w GOSUMDB=sum.golang.google.cn
 
 新机器或新阶段第一次 `go get` 之前，先用 `go env GOPROXY GOSUMDB` 检查代理配置；如果是国内网络且仍是默认值，先按上述命令切换，再开始拉依赖。
 
+## Homebrew 默认 mysql formula 版本与计划文档不一致
+
+### 场景
+
+Stage 2 Day 1 执行 `brew install mysql`，预期装 MySQL 8（stage-plan 写的是 MySQL 8），实际装到了 9.6.0。
+
+### 原因
+
+Homebrew 的 `mysql` formula 始终跟随上游最新主版本，目前已经是 9.x。要锁定 8.x 必须显式装 `mysql@8.4`（且 9 → 8 是降级，不能直接切换，需先停服务并迁移 datadir）。
+
+### 解决方案
+
+评估对项目的实际影响：
+
+- GORM 默认 driver `go-sql-driver/mysql` 完全兼容 8.0+/9.x（协议未变）。
+- 9.x 默认认证插件 `caching_sha2_password`，driver 自动协商，无需特殊处理。
+- 9.x 移除了一些 deprecated 关键字 / SQL 模式，本项目 4 张表未触发。
+- 影响可忽略时，直接采用 9.x，并把计划中"MySQL 8"统一改为"MySQL 8/9"。
+
+### 下次如何避免
+
+涉及 DB / 运行时大版本时，stage-plan 不要写死单一主版本号；写"≥8.0"或"8/9"等区间。安装前先 `brew info <formula>` 确认实际默认版本，再决定是否锁版本。
+
 ## middleware 与 handler 响应构造重复导致维护隐患
 
 ### 场景
@@ -166,3 +193,53 @@ handler 包的 `response.go` 改为代理层，内部转发调用 `internal/resp
 ### 下次如何避免
 
 涉及多包共用的工具函数（响应构造、错误码、traceID 生成等），第一次写时就放在独立的公共包中，不要先写在业务包里再事后提取。判断标准：如果这个函数未来可能被 handler 和 middleware 同时调用，直接放 `internal/response` 或 `internal/pkg`。
+
+## Gate C（学习闸门）的责任主体是用户，AI 不得代勾
+
+### 场景
+
+Stage 2 Day 3 编码前只显式过了 Gate A/B/D，跳过了 Gate C 直接写 GORM/连接池代码。Day 3 结束后用户问"是不是漏过了 Gate C"，AI 把"代码里已经用到了 GORM `Open/First/Create/Save` 等 API"等同于"Gate C 已通过"，把三项勾上。用户随即指出"我自己还没完成学习"，AI 才意识到搞错了主体。
+
+### 原因
+
+两层错误叠加：
+1. **流程层**：Gate A/B/D 偏决策（范围、契约、目录），容易被当成"必过"项；Gate C 偏学习清单，AI 主观感觉"代码能跑就行"于是跳过，未在编码前显式确认。
+2. **主体层**：Gate C 的目的是确保**用户**能看懂、能维护、能独立写下一段代码，主体是用户。AI 写出可运行代码 ≠ 用户学过这些知识；AI 没有勾选 Gate C 的权限。
+
+### 解决方案
+
+- Gate C 只能由用户自己勾选，AI 不得代勾。
+- AI 推进每个 Day 编码前必须先问"Gate C 这几条你学过/查过文档了吗？"用户没确认就停下，可以提供精简学习材料（API 列表 + 一段最小可运行示例 + 几行解释），但不替用户走完学习。
+- Day 编码完成后，AI 可以在产出物里列出"本 Day 实际用到了 Gate C 的哪些 API、出现在哪个文件哪行"，作为用户对照学习的索引；勾选动作仍由用户完成。
+
+### 下次如何避免
+
+把 Gate 勾选权显式记入工作流：
+- A / B / D：AI 协助起草、用户确认勾选。
+- **C：AI 不得勾选，必须由用户在学习后自己勾。**
+- E：由 curl / 测试结果共同确认。
+- F：AI 起草 progress-log 与 pitfalls，用户复核。
+
+每次进入新 Stage 时，复制一份当 Stage 的 Gate A-D 到 progress-log 第一天开头作为硬阻断；中途引入新依赖或新工具，先停下来补一条 Gate C 再继续。
+
+## 阶段切换时漏改 `## 当前阶段：` 标题，导致 harness-check 失效
+
+### 场景
+
+Stage 1 全部 Gate 通过、已实际进入 Stage 2 后，`stage-plan.md` 第 11 行的标题仍是 `## 当前阶段：阶段 1 ...`。`scripts/harness-check.js` 通过这个标题正则定位"当前阶段"块，再读其 Gate E 勾选率。结果脚本一直读到 Stage 1 的 Gate E（5/5 全勾），输出 "可进入下一阶段"，掩盖了 Stage 2 实际只完成 0-1/5 的真实进度。
+
+### 原因
+
+`stage-plan.md` 用一个特殊的 `## 当前阶段：xxx` 标题作为"游标"，其它阶段则是 `## 阶段 N: xxx`。阶段切换时必须手动把游标从旧阶段挪到新阶段，但流程清单里没显式列这一步。
+
+### 解决方案
+
+切换时同时改两行标题：
+- 旧阶段：`## 当前阶段：阶段 N ...` → `## 阶段 N ...（已完成）`
+- 新阶段：`## 阶段 N+1 ...` → `## 当前阶段：阶段 N+1 ...`
+
+之后立即跑 `npm run harness:check`，确认报告里 `阶段 [...]` 的名字变成了新阶段，Gate E 进度也变成新阶段的真实分子分母。
+
+### 下次如何避免
+
+把"挪动 `## 当前阶段：` 游标"写进阶段切换 SOP（progress-log "进入下一阶段" 的检查项里），并在 `harness-check.js` 后续考虑增强：当 Gate E 全勾且 stage-plan 中存在下一阶段段落时，输出 WARN 提示"该挪游标了"，而不是单纯报喜。

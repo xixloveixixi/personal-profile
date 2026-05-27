@@ -7,6 +7,25 @@
 - `docs/dev-harness/progress-log.md`
 - `docs/dev-harness/pitfalls.md`
 
+涉及业务后端（Stage 2 起）时，还必须先读取：
+
+- `docs/dev-harness/api-contract.md`
+- `docs/dev-harness/schema.md`
+
+涉及前端 Track（Next.js 公开页 / 后台）时，还必须先读取：
+
+- `docs/dev-harness/stage-plan-frontend.md`
+
+## 自检命令
+
+任何阶段切换或契约变更后，建议运行 `npm run harness:check` 校验：
+
+- progress-log 日期合法
+- 当前阶段 Gate E 进度
+- 旧技术栈关键词残留
+- 契约文件存在性
+- AGENTS.md 关键约束未被误删
+
 ## 工作流程
 
 1. 先根据 `stage-plan.md` 判断当前阶段。
@@ -18,6 +37,13 @@
 7. 完成后更新 `progress-log.md`。
 8. 如果出现可复用踩坑，更新 `pitfalls.md`。
 9. 如果编码过程中做了非平凡重构（新增 package、调整依赖方向），评估是否写入 `pitfalls.md`（重点记录"为什么要这样改"）。
+
+## Gate 勾选权
+
+- Gate A / B / D：AI 协助起草，用户确认后勾选。
+- **Gate C（学习闸门）：AI 不得代勾，必须由用户学习后自己勾。** AI 在每个 Day 编码前必须先确认"Gate C 这几条你学过了吗"，用户未确认则停下，可提供精简学习材料（API 列表 + 最小示例 + 几行解释）但不替用户完成学习。
+- Gate E：由 curl / 测试结果与用户共同确认。
+- Gate F：AI 起草 `progress-log.md` / `pitfalls.md`，用户复核。
 
 ## 闭环产出物检查
 
@@ -35,6 +61,6 @@
 ## 限制
 
 - 不允许跳过阶段直接开发后续功能。
-- 不允许在未确认接口和表结构前写业务后端。
+- 不允许在未确认接口和表结构前写业务后端。**接口必须先在 `docs/dev-harness/api-contract.md` 冻结，表结构必须先在 `docs/dev-harness/schema.md` 冻结；未填禁止写业务 handler / GORM model / migration。**
 - 不允许把博客迁移出 Notion。
 - 不允许一次性大范围重构现有前端。
