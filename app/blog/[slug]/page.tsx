@@ -3,6 +3,7 @@ import { getPostBlocks, getPostById, getPublishedPosts } from '@/lib/notion'
 import { NotionBlockRenderer } from '@/components/blog/NotionBlockRenderer'
 import { generateMetadata } from './metadata'
 
+export const dynamic = 'force-dynamic'
 export { generateMetadata }
 
 interface BlogPostPageProps {
@@ -12,10 +13,9 @@ interface BlogPostPageProps {
 }
 
 export async function generateStaticParams() {
+  if (!process.env.NOTION_TOKEN || !process.env.NOTION_DATABASE_ID) return []
   const posts = await getPublishedPosts()
-  return posts.map((post) => ({
-    slug: post.id,
-  }))
+  return posts.map((post) => ({ slug: post.id }))
 }
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {

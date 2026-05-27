@@ -2,6 +2,8 @@ import type { Metadata } from 'next'
 import Link from 'next/link'
 import { getPublishedPosts } from '@/lib/notion'
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: '博客 | 阿菥的个人主页',
   description: 'Notion 同步的博客文章',

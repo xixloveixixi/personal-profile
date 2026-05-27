@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { hybridSearch } from './hybrid-search'
 import { getAllProjects } from '@/lib/content/projects'
-import skillsData from '@/content/about/skills.json'
+import { getPublicSkills } from '@/lib/api/public'
 import { agentErrorHandler } from './error-handler'
 import { formatToolResponseWithSource } from './hallucination-prevention'
 
@@ -156,6 +156,7 @@ export const getSkillInfoTool: Tool = {
   }),
   execute: async ({ skillName }) => {
     try {
+      const skillsData = await getPublicSkills().catch(() => [])
       const skill = skillsData.find(
         (s) =>
           s.name.toLowerCase().includes(skillName.toLowerCase()) ||
@@ -168,7 +169,7 @@ export const getSkillInfoTool: Tool = {
 
       const answer = `技能名称: ${skill.name}
 分类: ${skill.category}
-熟练程度: ${skill.proficiency}%
+熟练程度: ${skill.proficiencyLevel}
 描述: ${skill.description}`
       
       // 第一层防护：添加来源信息

@@ -1,7 +1,6 @@
 import { getAllProjects } from '@/lib/content/projects'
 import { getPublishedPosts, getPostContent } from '@/lib/notion'
-import contactData from '@/content/about/contact.json'
-import skillsData from '@/content/about/skills.json'
+import { getPublicSkills } from '@/lib/api/public'
 import timelineData from '@/content/about/timeline.json'
 
 export interface KnowledgeChunk {
@@ -60,10 +59,10 @@ function createPersonalInfoChunk(): KnowledgeChunk {
 /**
  * 创建技能信息知识块
  */
-function createSkillsChunks(skills: typeof skillsData): KnowledgeChunk[] {
+function createSkillsChunks(skills: Awaited<ReturnType<typeof getPublicSkills>>): KnowledgeChunk[] {
   const skillsInfo = `
 我的技能栈：
-${skills.map(s => `- ${s.name} (${s.category}): ${s.proficiency}% - ${s.description}`).join('\n')}
+${skills.map(s => `- ${s.name} (${s.category}): ${s.proficiencyLevel} - ${s.description}`).join('\n')}
   `.trim()
 
   return [
@@ -282,8 +281,9 @@ export async function buildKnowledgeBase(): Promise<KnowledgeChunk[]> {
   // 1. 个人信息（硬编码）
   chunks.push(createPersonalInfoChunk())
 
-  // 2. 技能信息（JSON 文件）
-  chunks.push(...createSkillsChunks(skillsData))
+  // 2. 技能信息（从 API 获取）
+  const skills = await getPublicSkills().catch(() => [])
+  chunks.push(...createSkillsChunks(skills))
 
   // 3. 时间线经历（教育 + 工作 + 项目）
   chunks.push(...createTimelineChunks(timelineData))

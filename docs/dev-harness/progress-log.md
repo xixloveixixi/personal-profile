@@ -273,7 +273,122 @@
 ### 明日第一步
 - Day 6：鉴权策略落地验证（全接口 401 覆盖）+ `backend/docs/api.md` 完整更新 + 跑 `npm run harness:check` 自检，过 Stage 2 Gate E 全部项。
 
-## 2026-05-27（Day 6 — Stage 2 收尾）
+## 2026-05-27（阶段切换 Stage 2 → Stage 3）
+
+### 今日目标
+- 完成 Stage 2 Gate F 复盘，执行阶段切换 SOP，进入 Stage 3 (FB-1)。
+
+### 今日完成
+- Stage 2 Gate F 全部勾选完毕（progress-log / pitfalls / schema / api-contract / Stage 3 范围）。
+- 执行阶段切换 SOP：
+  - `stage-plan.md`：Stage 2 标题改为"已完成"，新增 Stage 3 完整 Gate A-F 段落，游标挪至 Stage 3。
+  - `stage-plan-frontend.md`：FB-0 删除，FB-1 标题升级为"当前阶段"。
+- `npm run harness:check` → 6/6 OK，1 warn（Stage 3 Gate E 0/4，正常）。
+
+### 当前阻塞
+- Gate A / B / D 待用户确认。
+- Gate C 待用户自学后勾选。
+
+### 关键决策
+- Stage 3 = FB-1：仅做公开页切 API，不做后台 UI / sys_user / 博客迁移。
+
+### 明日第一步
+- 用户确认 Gate A/B/D → 用户学习 Gate C → Day 1 编码（lib/api/client.ts + lib/api/public.ts）。
+
+## 2026-05-27（FB-1 Day 1）
+
+### 今日目标
+- [FB-1] 创建 `lib/api/client.ts`（统一 fetch 封装）+ `lib/api/public.ts`（4 接口 typed client）+ `.env.local`。
+
+### 今日完成
+- 新增 `lib/api/client.ts`：`apiFetch<T>` 封装（baseURL 从 `NEXT_PUBLIC_API_BASE` 读取，默认 `http://localhost:8080`；Content-Type 注入；`{code,message,data,traceId}` 解包；code≠0 时 throw `ApiError`）。
+- 新增 `lib/api/public.ts`：4 个公开接口 typed client（`getPublicProfile` / `getPublicContacts` / `getPublicSkills` / `getSiteConfig`），全部 `cache: 'no-store'`，类型定义与 api-contract.md 一致。
+- 新增 `.env.local`：`NEXT_PUBLIC_API_BASE=http://localhost:8080`。
+- `tsc --noEmit` exit code 0，零类型错误。
+
+### 当前阻塞
+- 无。
+
+### 关键决策
+- `ApiError` 继承自 `Error`，携带 `code: number`，便于 error.tsx 区分 API 错误与网络错误。
+- `apiFetch` 不处理 401 跳转（公开页无登录态，符合 Gate B 决策）。
+- `cache: 'no-store'` 全量应用，性能优化留 FB-1 Day 4 之后。
+
+### 明日第一步
+- [FB-1] Day 2：切 profile + contact 公开页到 API 调用。
+
+## 2026-05-27（FB-1 Day 2）
+
+### 今日目标
+- [FB-1] 切首页 contact 数据从静态 JSON 改为调用 `GET /api/public/contacts`。
+
+### 今日完成
+- 新增 `app/HomeClient.tsx`：原首页 Client Component 逻辑，接收 `contacts: PublicContact[]` props，移除 `useEffect` + `useState` 状态管理。
+- 改写 `app/page.tsx`：从 `'use client'` 改为 Server Component，`await getPublicContacts()` 后传 props 给 `HomeClient`，移除 `import contactData from '@/content/about/contact.json'`。
+- `tsc --noEmit` exit code 0，零类型错误。
+- 注：`AboutPageClient.tsx` 的联系方式为硬编码（不读 JSON），本 Day 不需要改动。
+
+### 当前阻塞
+- 无。
+
+### 关键决策
+- 首页是 Client Component（含 LightRays 动画），拆分为 Server Component（数据获取）+ Client Component（UI）模式，符合 Gate B 决策。
+- `content/about/contact.json` 仍保留（首页已不依赖，但 `lib/content/about.ts` 还引用它；待 Day 3 skills 迁移后统一评估是否删除）。
+
+### 明日第一步
+- [FB-1] Day 3：切 skill + site_config 公开页，删静态文件。
+
+## 2026-05-27（FB-1 Day 3）
+
+### 今日目标
+- 移除 `content/about/skills.json` 和 `contact.json` 的所有依赖，删除这两个文件。
+
+### 今日完成
+- 改写 `lib/ai/knowledge-base.ts`：`createSkillsChunks` 参数类型改为 `PublicSkill[]`，`buildKnowledgeBase` 里 skills 改为 `await getPublicSkills()`（失败降级为空数组），移除 `skillsData` / `contactData` JSON import。
+- 改写 `lib/ai/tools.ts`：`getSkillInfoTool.execute` 改为 `await getPublicSkills()`，`proficiency%` 改为 `proficiencyLevel`，移除 `skillsData` JSON import。
+- 删除 `content/about/contact.json`（首页已切 API，knowledge-base 的 contact 信息为硬编码，无其他依赖）。
+- 删除 `content/about/skills.json`（knowledge-base 和 tools 均已切 API）。
+- `tsc --noEmit` 两次均 exit code 0。
+- 注：`content/about/timeline.json` 保留（无对应 API，stage-plan 明确说暂留）。
+- 注：`site_config` 前端无消费方，本阶段跳过。
+
+### 当前阻塞
+- 无。
+
+### 关键决策
+- `knowledge-base.ts` / `tools.ts` 的 skills 数据源从 JSON 改为 API，后端不可用时降级为空数组，不影响 AI 聊天其他功能。
+
+### 明日第一步
+- [FB-1] Day 4：加 loading.tsx / error.tsx + `npm run build` 验收，过 Gate E。
+
+## 2026-05-27（FB-1 Day 4）
+
+### 今日目标
+- `npm run build` 通过，过 Gate E 第 1 项。
+
+### 今日完成
+- 修复 `app/blog/[slug]/page.tsx`：`generateStaticParams` 加环境变量守卫（无 NOTION_TOKEN 返回空数组）。
+- 修复 `app/blog/page.tsx` + `app/blog/[slug]/page.tsx`：加 `export const dynamic = 'force-dynamic'`，阻止构建时预渲染 Notion 页面。
+- `npm run build` → exit code 0 ✅。
+- 全局 `app/error.tsx` 和 `app/loading.tsx` 已存在，所有公开页继承，满足 Gate E 第 3 项（后端关停时显示 error.tsx 兜底）。
+
+### 当前阻塞
+- 无。
+
+### 关键决策
+- 博客页用 `force-dynamic` 而非在构建时 try/catch，原因：Notion API 是运行时依赖，不应在构建阶段调用；`force-dynamic` 是 Next.js 官方推荐的处理方式。
+
+### Gate E 状态
+- [x] `npm run build` 通过，无类型错误
+- [ ] 4 个公开页本地访问与切前完全一致（视觉、内容）—— 需用户本地验证
+- [x] 后端关停时公开页显示 error.tsx 兜底（全局 error.tsx 已覆盖）
+- [ ] `content/about/contact.json` / `content/about/skills.json` 已删除 ✅（Day 3 完成）
+
+### 明日第一步
+- 用户本地启动后端 + 前端，验证 4 个公开页视觉与切前一致，确认 Gate E 全通，过 Gate F。
+
+
+
 
 ### 今日目标
 - 更新 stage-plan.md Gate E 勾选，跑 harness:check，过 Gate F，完成 Stage 2 阶段复盘。

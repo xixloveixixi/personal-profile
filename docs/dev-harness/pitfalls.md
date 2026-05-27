@@ -222,7 +222,58 @@ Stage 2 Day 3 编码前只显式过了 Gate A/B/D，跳过了 Gate C 直接写 G
 
 每次进入新 Stage 时，复制一份当 Stage 的 Gate A-D 到 progress-log 第一天开头作为硬阻断；中途引入新依赖或新工具，先停下来补一条 Gate C 再继续。
 
-## 阶段切换时漏改 `## 当前阶段：` 标题，导致 harness-check 失效
+## Next.js Server Component 调用外部 API 时后端未启动导致白屏
+
+### 场景
+
+FB-1 Day 2 把首页 `app/page.tsx` 改为 Server Component 后，`await getPublicContacts()` 在服务端执行。后端未启动时 fetch 抛出 `fetch failed`，Next.js 将错误传递给客户端，触发全局 error boundary，整个首页白屏。
+
+### 原因
+
+Server Component 的 fetch 失败会向上冒泡，如果没有 try/catch 或 `.catch()` 兜底，Next.js 会把错误传给最近的 error boundary（全局 `app/error.tsx`），导致整页替换为错误 UI。
+
+### 解决方案
+
+对"后端不可用时页面仍应正常渲染"的接口调用加 `.catch(() => [])` 降级：
+
+```ts
+const contacts = await getPublicContacts().catch(() => [])
+```
+
+### 下次如何避免
+
+公开展示页的 API 调用一律加降级默认值，后端挂了不应影响页面基本可访问性。只有"无数据则页面无意义"的场景才允许让错误冒泡到 error boundary。
+
+## Next.js 博客页构建时调用 Notion API 失败
+
+### 场景
+
+FB-1 Day 4 `npm run build` 时，`/blog/page.tsx` 和 `/blog/[slug]/page.tsx` 在构建阶段被静态预渲染，调用了 `getPublishedPosts()`，但构建环境没有 `NOTION_TOKEN`，导致 build 失败。
+
+### 原因
+
+Next.js 默认会尝试静态预渲染所有 Server Component 页面。依赖运行时外部 API（Notion、数据库）的页面必须显式声明为动态渲染，否则构建时会实际发起请求。
+
+### 解决方案
+
+在依赖运行时 API 的页面顶部加：
+
+```ts
+export const dynamic = 'force-dynamic'
+```
+
+同时给 `generateStaticParams` 加环境变量守卫，避免构建时调用：
+
+```ts
+export async function generateStaticParams() {
+  if (!process.env.NOTION_TOKEN) return []
+  ...
+}
+```
+
+### 下次如何避免
+
+任何依赖运行时环境变量（Notion、数据库 DSN、第三方 API Key）的页面，在创建时就加 `export const dynamic = 'force-dynamic'`，不要等到 build 失败再加。
 
 ### 场景
 

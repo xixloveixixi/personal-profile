@@ -96,7 +96,7 @@
 
 ---
 
-## 当前阶段：阶段 2 公开数据后端化（profile 最小集）
+## 阶段 2 公开数据后端化（profile 最小集）（已完成）
 
 ### 阶段目标
 
@@ -204,10 +204,89 @@
 
 ---
 
-## 阶段 3（占位）：前端公开页切 API + 引入 sys_user
+## 当前阶段：阶段 3 前端公开页切 API (FB-1)
 
-> 进入前再补 Gate A-F。候选范围：
-> - 前端公开页改读 `/api/public/*`，移除前端静态数据。
-> - 引入 `sys_user` 表，登录从硬编码迁移到 DB。
-> - 后台管理 UI（最小可用）。
+### 阶段目标
+
+把现有 Next.js 公开页（个人信息 / 联系方式 / 技能 / 站点配置）从读 `data/*.ts` 静态数据改为调用后端 `/api/public/*`，移除对应静态数据文件，保持页面表现完全不变。
+
+### 本阶段做什么
+
+- 新增 `lib/api/client.ts`：统一 fetch 封装（baseURL、错误码、`{code,message,data,traceId}` 解包）。
+- 新增 `lib/api/public.ts`：4 个读接口的 typed client。
+- 用 Next.js Server Component 直接 `await` 调用，不引入 SWR/React Query。
+- 把现有读静态数据的 4 处页面切到 API 调用。
+- 删除已迁移完毕的 `content/about/contact.json` / `content/about/skills.json` 静态文件（`content/about/timeline.json` 暂留，无对应 API）。
+- 加 `loading.tsx` / `error.tsx` 兜底 UI。
+
+### 本阶段不做什么
+
+- 不做 owner 后台管理 UI（FB-2 再做）。
+- 不引入 Zustand（公开页是 Server Component，无客户端状态）。
+- 不引入 SWR / React Query / Tanstack。
+- 不做 ISR / 缓存策略调整（先全量 `cache: 'no-store'`）。
+- 不动博客（Notion）相关页面。
+- 不做 sys_user 表（登录仍走 Stage 1/2 硬编码 owner 凭据）。
+
+### 闸门检查
+
+#### Gate A：需求闸门
+
+- [x] 是否确认本阶段只做公开页 4 个数据源切 API？
+- [x] 是否确认 owner 后台不在本阶段？
+- [x] 是否确认博客页不动、sys_user 不动？
+
+#### Gate B：设计闸门
+
+- [x] API client 错误处理策略是否明确（接口 4xx 显示 error.tsx，无 401 跳转）？
+- [x] Server Component vs Client Component 边界是否清晰（公开页全 Server Component）？
+- [x] 本地开发 `NEXT_PUBLIC_API_BASE=http://localhost:8080` 配置方式是否确认？
+- [x] 类型策略是否确认（前端手写 TS interface，对齐 api-contract.md）？
+
+#### Gate C：学习闸门
+
+- [x] 是否只学 Next.js 14 Server Component 中 `fetch` 的缓存语义？
+- [x] 是否只学 `loading.tsx` / `error.tsx` 文件级 boundary？
+- [x] 是否只学最小 fetch 错误处理模式？
+
+#### Gate D：编码闸门
+
+- [x] 工具链验证：`node v24.14.1` / `npm 11.11.0` 已验证；后端启动后再验 `/api/health`。
+- [x] 是否明确 API client 文件位置：`lib/api/client.ts`、`lib/api/public.ts`？
+- [x] 是否确认不破坏现有页面 SEO（meta、title 仍由页面 export）？
+
+#### Gate E：验证闸门
+
+- [x] `npm run build` 通过，无类型错误。
+- [x] 4 个公开页本地访问与切前完全一致（视觉、内容）。
+- [x] 后端关停时 4 个公开页显示 error.tsx 兜底，不白屏。
+- [x] `content/about/contact.json` / `content/about/skills.json` 已迁移项已被删除，`timeline.json` 保留。
+
+#### Gate F：沉淀闸门
+
+- [ ] 是否更新 `progress-log.md`？
+- [ ] 踩坑写入 `pitfalls.md`（特别是 SSR fetch / 环境变量类）？
+- [ ] 是否明确 FB-2 范围（owner 后台管理 UI）？
+
+### 节奏建议
+
+| 天数 | 目标 | 产出 |
+| --- | --- | --- |
+| Day 1 | 确认 Gate A/B/D，新增 `lib/api/client.ts` + `lib/api/public.ts` | API client 可调通 |
+| Day 2 | 切 profile + contact 公开页到 API | 2 页切换完成 |
+| Day 3 | 切 skill + site_config 公开页，删静态文件 | 4 页全切完 |
+| Day 4 | 加 loading.tsx / error.tsx + `npm run build` 验收 | Gate E 全通 |
+| Day 5 | 阶段复盘 + 文档更新 | 进入 FB-2 |
+
+### 降级策略
+
+- 后端未就绪：先用 `lib/api/mock.ts` 返回与 API 一致的结构，保证前端可独立推进。
+- Server Component fetch 缓存语义复杂：先全部 `cache: 'no-store'`，性能优化留后。
+- 类型重复维护：前端手写 TS interface，OpenAPI 生成留后。
+
+### 进入前置条件
+
+- [x] Stage 2 Gate E/F 全部通过。
+- [x] 后端 4 张表 API 可用（`curl /api/public/profile` 等返回正确 JSON）。
+- [x] 范围已确认（4 张公开页切 API，不做后台、不动博客）。
 

@@ -10,12 +10,7 @@
 - 不允许一次性大范围重构现有前端（沿用 AGENTS.md 限制条款）。
 - 公开页迁移到 API 之前，前端静态数据（`data/*.ts`）保留只读不动。
 
-## 当前阶段：FB-0（未启动）
-
-> 当前后端在 Stage 1 结束、Stage 2 启动前，前端 Track 暂不进入。
-> Stage 2 后端完成后，从 FB-1 开始。
-
-## FB-1：公开页切 API（计划中）
+## 当前阶段：FB-1：公开页切 API
 
 ### 阶段目标
 
@@ -41,25 +36,25 @@
 ### 闸门检查
 
 #### Gate A：需求闸门
-- [ ] 是否确认本阶段只做公开页 4 个数据源切 API？
-- [ ] 是否确认 owner 后台不在本阶段？
-- [ ] 是否确认博客页不动？
+- [x] 是否确认本阶段只做公开页 4 个数据源切 API？
+- [x] 是否确认 owner 后台不在本阶段？
+- [x] 是否确认博客页不动？
 
 #### Gate B：设计闸门
-- [ ] API client 错误处理策略是否明确（401 跳登录？接口 4xx 显示什么？）？
-- [ ] Server Component vs Client Component 边界是否清晰？
-- [ ] 后端 dev 时 `NEXT_PUBLIC_API_BASE` 如何配置（本地 8080 / 生产域名）？
-- [ ] 与现有静态数据类型如何过渡（先用 `data/types.ts` 类型，逐步替换为 API 类型）？
+- [x] API client 错误处理策略是否明确（401 跳登录？接口 4xx 显示什么？）？
+- [x] Server Component vs Client Component 边界是否清晰？
+- [x] 后端 dev 时 `NEXT_PUBLIC_API_BASE` 如何配置（本地 8080 / 生产域名）？
+- [x] 与现有静态数据类型如何过渡（先用 `data/types.ts` 类型，逐步替换为 API 类型）？
 
 #### Gate C：学习闸门
-- [ ] 是否只学 Next.js 14 Server Component 中 `fetch` 的缓存语义？
-- [ ] 是否只学 `loading.tsx` / `error.tsx` 文件级 boundary？
-- [ ] 是否只学最小 fetch 错误处理模式？
+- [x] 是否只学 Next.js 14 Server Component 中 `fetch` 的缓存语义？
+- [x] 是否只学 `loading.tsx` / `error.tsx` 文件级 boundary？
+- [x] 是否只学最小 fetch 错误处理模式？
 
 #### Gate D：编码闸门
-- [ ] 工具链验证：`node -v` / `npm -v` / 后端 `curl /api/health` 通。
-- [ ] 是否明确 API client 文件位置：`lib/api/client.ts`、`lib/api/public.ts`？
-- [ ] 是否确认不破坏现有页面 SEO（meta、title 仍由页面 export）？
+- [x] 工具链验证：`node v24.14.1` / `npm 11.11.0` 已验证；后端 `/api/health` 启动后验。
+- [x] 是否明确 API client 文件位置：`lib/api/client.ts`、`lib/api/public.ts`？
+- [x] 是否确认不破坏现有页面 SEO（meta、title 仍由页面 export）？
 
 #### Gate E：验证闸门
 - [ ] `npm run build` 通过，无类型错误。
