@@ -505,22 +505,21 @@
 
 #### Gate D：编码闸门
 
-- [ ] `go build ./...` 当前通过？
-- [ ] `npm run build` 当前通过？
-- [ ] 是否确认新增文件位置：`internal/model/portfolio_project.go`、`internal/repository/portfolio_project.go`、`internal/handler/project.go`？
-- [ ] 是否确认前端切 API 不影响 SEO（slug 路由保持、meta 保持）？
-- [ ] 验收方式：curl 全通 + 种子数据灌入 + `npm run build` + 浏览器确认。
+- [x] `go build ./...` 当前通过。
+- [x] `npm run build` 当前通过。
+- [x] 新增文件位置已确认（model/repo/handler）。
+- [x] 前端切 API 不影响 SEO（slug 路由保持、meta 保持）。
 
 #### Gate E：验证闸门
 
-- [ ] `portfolio_project` 表已建，种子数据（5 个项目）可灌入。
-- [ ] 公开 API：`GET /api/public/projects` 返回列表；`GET /api/public/projects/:slug` 返回详情。
-- [ ] Admin API：6 个接口 curl 全通（带 token + role=owner）。
-- [ ] 前端 portfolio 列表页 + 详情页表现与迁移前一致。
-- [ ] 后台 `/admin/projects` CRUD 操作正常。
-- [ ] `content/projects/*.json` 与 `lib/content/projects.ts` 已删除。
-- [ ] `npm run build` 通过。
-- [ ] `go build ./...` 通过。
+- [x] `portfolio_project` 表已建，种子数据（5 个项目）可灌入。
+- [x] 公开 API：`GET /api/public/projects` 返回列表；`GET /api/public/projects/:slug` 返回详情。
+- [x] Admin API：6 个接口 curl 全通（带 token + role=owner）。
+- [ ] 前端 portfolio 列表页 + 详情页表现与迁移前一致（需浏览器实测）。
+- [ ] 后台 `/admin/projects` CRUD 操作正常（需浏览器实测）。
+- [x] `content/projects/*.json` 与 `lib/content/projects.ts` 已删除。
+- [x] `npm run build` 通过。
+- [x] `go build ./...` 通过。
 
 #### Gate F：沉淀闸门
 
