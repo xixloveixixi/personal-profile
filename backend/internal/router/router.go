@@ -44,11 +44,17 @@ func Setup(r *gin.Engine, db *gorm.DB) {
 	siteConfigRepo := repository.NewSiteConfigRepo(db)
 	siteConfigHandler := handler.NewSiteConfigHandler(siteConfigRepo)
 
+	// -- portfolio_project --
+	projectRepo := repository.NewPortfolioProjectRepo(db)
+	projectHandler := handler.NewProjectHandler(projectRepo)
+
 	public := api.Group("/public")
 	public.GET("/profile", profileHandler.GetPublic)
 	public.GET("/contacts", contactHandler.GetPublicContacts)
 	public.GET("/skills", skillHandler.GetPublicSkills)
 	public.GET("/site-config", siteConfigHandler.GetPublicSiteConfig)
+	public.GET("/projects", projectHandler.GetPublicProjects)
+	public.GET("/projects/:slug", projectHandler.GetProjectBySlug)
 
 	admin := api.Group("/admin")
 	admin.Use(middleware.Auth())
@@ -64,4 +70,8 @@ func Setup(r *gin.Engine, db *gorm.DB) {
 	admin.DELETE("/skills/:id", skillHandler.DeleteSkill)
 	admin.GET("/site-config", siteConfigHandler.GetAdminSiteConfig)
 	admin.PUT("/site-config/:key", siteConfigHandler.UpsertSiteConfig)
+	admin.GET("/projects", projectHandler.GetAdminProjects)
+	admin.POST("/projects", projectHandler.CreateProject)
+	admin.PUT("/projects/:id", projectHandler.UpdateProject)
+	admin.DELETE("/projects/:id", projectHandler.DeleteProject)
 }
