@@ -59,3 +59,40 @@ export function getSiteConfig(): Promise<SiteConfigItem[]> {
     cache: 'no-store',
   })
 }
+
+// --- portfolio project ---
+
+export interface PublicProject {
+  id: number
+  slug: string
+  title: string
+  shortDescription: string
+  technologies: string[]
+  githubUrl: string
+  demoUrl: string
+  featuredImage: string
+  gallery: string[]
+  publishedAt: string | null
+  featured: boolean
+  sortOrder: number
+}
+
+export interface PublicProjectDetail extends PublicProject {
+  longDescription: string
+  problem: string
+  solution: string
+  challenges: string
+  results: string
+}
+
+export function getPublicProjects(): Promise<PublicProject[]> {
+  return apiFetch<PublicProject[]>('/api/public/projects', {
+    cache: 'no-store',
+  })
+}
+
+export function getPublicProjectBySlug(slug: string): Promise<PublicProjectDetail> {
+  return apiFetch<PublicProjectDetail>(`/api/public/projects/${slug}`, {
+    cache: 'no-store',
+  })
+}

@@ -1,12 +1,17 @@
 import { Metadata } from 'next'
-import { getProjectBySlug, getAllProjects } from '@/lib/content/projects'
+import { getPublicProjectBySlug, getPublicProjects, type PublicProjectDetail } from '@/lib/api/public'
 
 export async function generateMetadata({
   params,
 }: {
   params: { slug: string }
 }): Promise<Metadata> {
-  const project = getProjectBySlug(params.slug)
+  let project: PublicProjectDetail | null = null
+  try {
+    project = await getPublicProjectBySlug(params.slug)
+  } catch {
+    // API returns error for non-existent slug
+  }
 
   if (!project) {
     return {
@@ -24,4 +29,3 @@ export async function generateMetadata({
     },
   }
 }
-

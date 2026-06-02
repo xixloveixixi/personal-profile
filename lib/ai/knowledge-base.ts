@@ -1,4 +1,4 @@
-import { getAllProjects } from '@/lib/content/projects'
+import { getPublicProjects } from '@/lib/api/public'
 import { getPublishedPosts, getPostContent } from '@/lib/notion'
 import { getPublicSkills } from '@/lib/api/public'
 import timelineData from '@/content/about/timeline.json'
@@ -185,18 +185,13 @@ async function createProjectChunks(): Promise<KnowledgeChunk[]> {
   const chunks: KnowledgeChunk[] = []
   
   try {
-    const projects = getAllProjects()
+    const projects = await getPublicProjects()
     console.log(`✓ 找到 ${projects.length} 个项目`)
 
     for (const project of projects) {
       const projectContent = `
 项目名称：${project.title}
 简介：${project.shortDescription}
-${project.longDescription ? `详细介绍：${project.longDescription}` : ''}
-${project.problem ? `解决的问题：${project.problem}` : ''}
-${project.solution ? `解决方案：${project.solution}` : ''}
-${project.challenges ? `技术挑战：${project.challenges}` : ''}
-${project.results ? `项目成果：${project.results}` : ''}
 技术栈：${project.technologies.join(', ')}
 ${project.githubUrl ? `GitHub：${project.githubUrl}` : ''}
 ${project.demoUrl ? `Demo：${project.demoUrl}` : ''}

@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import { ExternalLink, Github, ChevronLeft, ChevronRight } from 'lucide-react'
-import type { PortfolioProject } from '@/lib/content/projects'
+import { type PublicProject } from '@/lib/api/public'
 
 interface PortfolioClientProps {
-  initialProjects: PortfolioProject[]
+  initialProjects: PublicProject[]
 }
 
 function ImageCarousel({ images, title }: { images: string[]; title: string }) {
@@ -98,7 +98,7 @@ function ImageCarousel({ images, title }: { images: string[]; title: string }) {
   )
 }
 
-function ProjectCard({ project }: { project: PortfolioProject }) {
+function ProjectCard({ project }: { project: PublicProject }) {
   const images = project.gallery?.length 
     ? project.gallery 
     : project.featuredImage 
@@ -168,12 +168,12 @@ function ProjectCard({ project }: { project: PortfolioProject }) {
 
 export function PortfolioClient({ initialProjects }: PortfolioClientProps) {
   const sortedProjects = [...initialProjects].sort((a, b) => {
-    if (a.order !== undefined && b.order !== undefined) {
-      return a.order - b.order
+    if (a.sortOrder !== undefined && b.sortOrder !== undefined) {
+      return a.sortOrder - b.sortOrder
     }
     if (a.featured && !b.featured) return -1
     if (!a.featured && b.featured) return 1
-    return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+    return new Date(b.publishedAt ?? '').getTime() - new Date(a.publishedAt ?? '').getTime()
   })
 
   return (
