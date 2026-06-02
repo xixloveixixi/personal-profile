@@ -132,15 +132,92 @@
 - **关联接口**：`GET /api/public/site-config`、`GET /api/admin/site-config`、`PUT /api/admin/site-config/:key`。
 - **备注**：`value_type=json` 时 `config_value` 内容须是合法 JSON；handler 不做强校验，前端按 `value_type` 自行解析。
 
-## 待冻结表
+## 待冻结表（Stage 3 / FB-3）
 
-> 当前无。Stage 2 范围已全部冻结。
+> 状态：✅ 已冻结于 2026-06-02。
+
+### sys_user
+
+- **用途**：系统用户表，支撑登录 DB 校验与 admin 接口 role 鉴权；Stage 3 仅有单条 owner 记录，不做多用户注册。
+- **DDL**：
+  ```sql
+  CREATE TABLE sys_user (
+    id              BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    username        VARCHAR(64)     NOT NULL              COMMENT '登录用户名',
+    password_hash   VARCHAR(255)    NOT NULL              COMMENT 'bcrypt 哈希',
+    role            VARCHAR(32)     NOT NULL DEFAULT 'owner' COMMENT '角色：owner（Stage 3 仅支持 owner）',
+    display_name    VARCHAR(64)     NOT NULL DEFAULT ''   COMMENT '显示名称',
+    email           VARCHAR(255)    NOT NULL DEFAULT ''   COMMENT '邮箱',
+    status          TINYINT(1)      NOT NULL DEFAULT 1    COMMENT '1 启用 0 禁用',
+    last_login_at   DATETIME(3)     NULL                  COMMENT '最后登录时间',
+    created_at      DATETIME(3)     NOT NULL,
+    updated_at      DATETIME(3)     NOT NULL,
+    deleted_at      DATETIME(3)     NULL,
+    UNIQUE KEY uk_username (username),
+    KEY idx_deleted_at (deleted_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统用户';
+  ```
+- **索引**：
+  - `uk_username`：保证用户名唯一，支撑登录时 `WHERE username = ?` 查询。
+  - `idx_deleted_at`：GORM 软删除查询过滤。
+- **关联接口**：`POST /api/auth/login`（改为 DB 校验）、`GET /api/auth/me`（从 DB 读取用户信息）。
+- **备注**：
+  - 密码存储使用 bcrypt（cost=10），handler 不得存储明文。
+  - Stage 3 不做注册接口，`sys_user` 通过种子 SQL 预灌 owner 记录。
+  - `owner_id` 字段在其他表（public_profile 等）与 `sys_user.id` 形成应用层 FK。
+  - Stage 3 admin 接口从"仅校验有效 Token"升级为"校验 Token 中 role=owner"。
+
+## 待冻结表（Stage 6 / FB-4）
+
+> 状态：✅ 已冻结于 2026-06-02。
+
+### portfolio_project
+
+- **用途**：owner 项目展示列表（对标前端 `content/projects/*.json`），含技术栈（JSON 数组）、gallery（JSON 数组）、详情文案。
+- **DDL**：
+  ```sql
+  CREATE TABLE IF NOT EXISTS portfolio_project (
+    id                BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    owner_id          BIGINT UNSIGNED NOT NULL              COMMENT '所属用户',
+    slug              VARCHAR(128)    NOT NULL              COMMENT 'URL 友好标识',
+    title             VARCHAR(255)    NOT NULL              COMMENT '项目标题',
+    short_description VARCHAR(512)    NOT NULL DEFAULT ''   COMMENT '短描述（卡片展示）',
+    long_description  TEXT            NULL                  COMMENT '长描述（详情页）',
+    problem           TEXT            NULL                  COMMENT '解决的问题',
+    solution          TEXT            NULL                  COMMENT '解决方案',
+    challenges        TEXT            NULL                  COMMENT '技术挑战',
+    results           TEXT            NULL                  COMMENT '成果',
+    technologies      JSON            NOT NULL              COMMENT '技术栈 JSON 数组 ["React","Go"]',
+    github_url        VARCHAR(512)    NOT NULL DEFAULT ''   COMMENT 'GitHub 仓库链接',
+    demo_url          VARCHAR(512)    NOT NULL DEFAULT ''   COMMENT '演示地址',
+    featured_image    VARCHAR(512)    NOT NULL DEFAULT ''   COMMENT '封面图 URL',
+    gallery           JSON            NULL                  COMMENT '图库 JSON 数组 ["/img/1.png"]',
+    published_at      DATE            NULL                  COMMENT '发布日期',
+    featured          TINYINT(1)      NOT NULL DEFAULT 0    COMMENT '1 精选 0 普通',
+    is_public         TINYINT(1)      NOT NULL DEFAULT 1    COMMENT '1 公开 0 隐藏',
+    sort_order        INT             NOT NULL DEFAULT 0    COMMENT '排序，升序',
+    created_at        DATETIME(3)     NOT NULL,
+    updated_at        DATETIME(3)     NOT NULL,
+    deleted_at        DATETIME(3)     NULL,
+    UNIQUE KEY uk_owner_slug (owner_id, slug),
+    KEY idx_owner_public_sort (owner_id, is_public, sort_order),
+    KEY idx_deleted_at (deleted_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='项目展示';
+  ```
+- **索引**：
+  - `uk_owner_slug(owner_id, slug)`：同一 owner 下 slug 唯一，支撑 `GET /api/public/projects/:slug` 路由。
+  - `idx_owner_public_sort`：支撑公开列表按 sort_order 排序。
+  - `idx_deleted_at`：GORM 软删除。
+- **关联接口**：`GET /api/public/projects`、`GET /api/public/projects/:slug`、`GET/POST/PUT/DELETE /api/admin/projects(/:id)`。
+- **备注**：
+  - `technologies` 和 `gallery` 用 JSON 字段存储，不拆子表（SDD 10.8 `portfolio_project_tech` 简化），降低 JOIN 复杂度，数据量小无性能问题。
+  - 与前端 `PortfolioProject` 接口完全对齐：`slug / title / shortDescription / longDescription / problem / solution / challenges / results / technologies / githubUrl / demoUrl / featuredImage / gallery / publishedAt / featured / order`。
 
 ## 本阶段不做
 
-- 不做 `sys_user`（SDD 10.2，登录仍走硬编码）。
-- 不做 `portfolio_project` / `portfolio_project_tech`（SDD 10.7-10.8）。
 - 不做学习/Agent 相关表（SDD 10.9-10.17）。
+- 不做用户注册接口 / 多用户体系。
+- 不做 `portfolio_project_tech` 子表（technologies 用 JSON 字段存储）。
 
 ## 变更记录
 

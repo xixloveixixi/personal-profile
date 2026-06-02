@@ -1,8 +1,9 @@
 # 研发 Harness 踩坑记录
 ## 索引
-- 流程类：范围控制、学习发散、文档同步、阶段切换标题、Gate C 勾选权
+- 流程类：范围控制、学习发散、文档同步、阶段切换标题、Gate C 勾选权、多 Track 当前阶段游标
 - Go 工程：go.mod 位置、GOPROXY、response 包
-- 工具链：进入新栈前置检查、MySQL formula 版本
+- 工具链：进入新栈前置检查、MySQL formula 版本、前后端开发端口 CORS
+- 前后端联调：API 响应字段命名风格变更
 
 ## 使用原则
 
@@ -294,3 +295,102 @@ Stage 1 全部 Gate 通过、已实际进入 Stage 2 后，`stage-plan.md` 第 1
 ### 下次如何避免
 
 把"挪动 `## 当前阶段：` 游标"写进阶段切换 SOP（progress-log "进入下一阶段" 的检查项里），并在 `harness-check.js` 后续考虑增强：当 Gate E 全勾且 stage-plan 中存在下一阶段段落时，输出 WARN 提示"该挪游标了"，而不是单纯报喜。
+
+## 多 Track 文档同时维护时当前阶段游标不同步
+
+### 场景
+
+前端 Track 启动后，`stage-plan.md`、`stage-plan-frontend.md`、`progress-log.md` 同时记录阶段状态。FB-2 已经开始开发，但主计划仍停在 FB-1，前端计划里同时存在两个 `## 当前阶段：` 标题，progress-log 则已经记录 FB-2 小闭环。
+
+### 原因
+
+阶段切换只更新了部分文档，没有把"主计划游标、Track 计划游标、progress-log 事实记录"作为一个原子操作一起维护。`harness:check` 当前只扫描 `stage-plan.md`，无法发现 `stage-plan-frontend.md` 中的双当前阶段问题。
+
+### 解决方案
+
+切换前端或后端 Track 阶段时，同步检查三类文件：
+- `stage-plan.md`：全局当前阶段必须指向实际推进中的阶段。
+- `stage-plan-frontend.md`：只能有一个 `## 当前阶段：`。
+- `progress-log.md`：最近日志的"明日第一步"必须与计划游标一致。
+
+### 下次如何避免
+
+阶段切换后立即搜索 `## 当前阶段：`，确认每个计划文件最多只有一个当前阶段，且多个计划文件之间没有互相矛盾。跑 `npm run harness:check` 之外，还要人工核对 Track 计划文件；后续可增强脚本，把 `stage-plan-frontend.md` 也纳入当前阶段数量检查。
+
+## 前后端开发端口不一致导致 CORS 预检失败
+
+### 场景
+
+FB-2 浏览器验收后台登录时，前端 dev server 实际运行在 `http://localhost:3001`，但后端 CORS 只允许 `http://localhost:3000`。浏览器调用 `POST http://localhost:8080/api/auth/login` 时先发 OPTIONS preflight，后端响应缺少 `Access-Control-Allow-Origin`，登录请求被浏览器拦截。
+
+### 原因
+
+Next.js 默认端口 3000 被占用时会自动切到 3001，但后端 CORS 白名单写死为单一 origin。curl 能成功不代表浏览器能成功，因为 curl 不执行浏览器 CORS 策略。
+
+### 解决方案
+
+后端 CORS 使用动态 origin 判断：
+- 明确白名单：优先匹配 `BACKEND_CORS_ALLOWED_ORIGINS`，多个 origin 用逗号分隔。
+- 本地开发兜底：允许 `http://localhost:3000-3009` 与 `http://127.0.0.1:3000-3009`。
+- 不使用 `AllowAllOrigins`，避免把带 `Authorization` 的后台接口暴露给任意来源。
+
+### 下次如何避免
+
+前后端联调前先确认浏览器地址栏中的实际 origin，并把它加入后端 CORS 白名单。凡是后台接口需要 Authorization header，都必须验证 OPTIONS preflight，而不能只用 POST curl 验证。
+
+## 后端 API 响应字段命名风格变更导致前端运行时错误
+
+### 场景
+
+FB-3 改造 login 接口时，后端新 handler 返回 camelCase 字段（`accessToken`、`expiresIn`），但前端 `lib/api/admin.ts` 的 `LoginResponse` 仍定义为 snake_case（`access_token`、`expires_in`）。TypeScript 类型检查不会报错（类型是手写 interface，与运行时 JSON 无关），但运行时 `res.access_token` 为 `undefined`，导致登录后 token 为空、后续所有 admin 请求 401。
+
+### 原因
+
+Go 的 `gin.H{}` 返回 JSON 时 key 是代码里写的字面量；Stage 1 用的是 snake_case（`access_token`），Stage 3 重写时改为 camelCase 与前端命名习惯对齐，但忘记同步更新前端类型定义。TS 编译不会检查运行时 JSON 字段名是否匹配 interface。
+
+### 解决方案
+
+改后端响应字段时，必须全局搜索前端中对旧字段名的引用并同步更新。
+
+### 下次如何避免
+
+改造涉及请求/响应结构变更的接口时，执行以下检查：
+1. `grep -r "旧字段名" app/ lib/ components/` 确认没有残留。
+2. 前端 `LoginResponse` 类型字段名必须与后端实际返回的 JSON key 严格一致。
+3. 如果有 OpenAPI / Swagger 文件，以它为唯一真相源生成前端类型。
+
+## Antd Modal 使用 `destroyOnClose` 时 `form.setFieldsValue` 失效
+
+### 场景
+
+Stage 6 的 `/admin/projects` 页面，点击"编辑"按钮后 Modal 弹出，但表单所有字段都是空的。同样的问题出现在 `/admin/contacts`、`/admin/skills`、`/admin/site-config` 页面。
+
+### 原因
+
+Modal 使用了 `destroyOnClose`（关闭时销毁内部 DOM 节点），而 `form.setFieldsValue()` 在 Modal 打开动画完成**之前**就被调用。此时 Form 还未挂载到 DOM，`setFieldsValue` 直接失效，Form 保持 initialValues 状态，导致所有字段为空。
+
+### 解决方案
+
+将 `form.setFieldsValue()` 移入 Modal 的 `afterOpenChange` 回调中执行：
+
+```tsx
+const handleAfterOpenChange = useCallback((open: boolean) => {
+  if (!open) return
+  const project = editingProject
+  if (!project) {
+    form.setFieldsValue({ slug: '', title: '', ... })
+    return
+  }
+  form.setFieldsValue({
+    slug: project.slug,
+    title: project.title,
+    ...
+  })
+}, [form, editingProject])
+
+<Modal afterOpenChange={handleAfterOpenChange} destroyOnClose>
+```
+
+### 下次如何避免
+
+任何使用了 `destroyOnClose` 的 Modal，且有"点击行数据后弹出编辑"逻辑时，必须用 `afterOpenChange` 而非在 `setModalOpen(true)` 之前调用 `setFieldsValue`。如果 Modal 只用于新建（无需预填数据），则不受此问题影响。

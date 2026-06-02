@@ -1,8 +1,10 @@
 package config
 
 import (
+	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -10,15 +12,44 @@ import (
 var JWTSecret = getEnv("JWT_SECRET", "dev-secret-change-me")
 
 const (
-	// OwnerUsername 降级阶段硬编码 owner 凭据，Stage 2 接 DB 后移除。
-	OwnerUsername = "owner"
-	// OwnerPassword 降级阶段硬编码 owner 密码。
-	OwnerPassword = "owner123"
 	// TokenExpiry Token 有效期（小时）。
 	TokenExpiry = 24
 	// OwnerID Stage 2 单 owner 模型固定 ID，写入数据时使用。
 	OwnerID uint64 = 1
 )
+
+// CORSAllowedOrigins 允许访问后端 API 的明确前端源。
+var CORSAllowedOrigins = getEnvList("BACKEND_CORS_ALLOWED_ORIGINS", nil)
+
+// IsAllowedCORSOrigin 判断请求来源是否允许访问后端 API。
+func IsAllowedCORSOrigin(origin string) bool {
+	for _, allowedOrigin := range CORSAllowedOrigins {
+		if origin == allowedOrigin {
+			return true
+		}
+	}
+
+	return isAllowedDevOrigin(origin)
+}
+
+func isAllowedDevOrigin(origin string) bool {
+	parsedOrigin, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+	if parsedOrigin.Scheme != "http" {
+		return false
+	}
+	if parsedOrigin.Hostname() != "localhost" && parsedOrigin.Hostname() != "127.0.0.1" {
+		return false
+	}
+
+	port, err := strconv.Atoi(parsedOrigin.Port())
+	if err != nil {
+		return false
+	}
+	return port >= 3000 && port <= 3009
+}
 
 // DBConfig 数据库连接配置（Stage 2 起）。
 type DBConfig struct {
@@ -53,4 +84,24 @@ func getEnvInt(key string, fallback int) int {
 		}
 	}
 	return fallback
+}
+
+func getEnvList(key string, fallback []string) []string {
+	v := os.Getenv(key)
+	if v == "" {
+		return fallback
+	}
+
+	parts := strings.Split(v, ",")
+	values := make([]string, 0, len(parts))
+	for _, part := range parts {
+		value := strings.TrimSpace(part)
+		if value != "" {
+			values = append(values, value)
+		}
+	}
+	if len(values) == 0 {
+		return fallback
+	}
+	return values
 }

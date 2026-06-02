@@ -19,6 +19,10 @@ export function Navigation() {
           <Link href="/blog" className="text-accent-gray font-medium">
             Blog
           </Link>
+          <span className="text-accent-gray">|</span>
+          <Link href="/admin/login" className="text-accent-gray font-medium">
+            backend
+          </Link>
         </div>
       </div>
     </nav>

@@ -13,18 +13,22 @@ import (
 func Setup(r *gin.Engine, db *gorm.DB) {
 	api := r.Group("/api")
 
-	// Stage 1 公开接口
+	// 公开接口
 	api.GET("/health", handler.Health)
-	api.POST("/auth/login", handler.Login)
-
-	// Stage 1 受保护接口（需登录）
-	private := api.Group("")
-	private.Use(middleware.Auth())
-	private.GET("/auth/me", handler.Me)
 
 	if db == nil {
 		return
 	}
+
+	// Stage 3 认证（DB 校验）
+	userRepo := repository.NewSysUserRepo(db)
+	authHandler := handler.NewAuthHandler(userRepo)
+	api.POST("/auth/login", authHandler.Login)
+
+	// 受保护接口（需登录）
+	private := api.Group("")
+	private.Use(middleware.Auth())
+	private.GET("/auth/me", authHandler.Me)
 
 	// Stage 2 业务路由
 
@@ -57,7 +61,7 @@ func Setup(r *gin.Engine, db *gorm.DB) {
 	public.GET("/projects/:slug", projectHandler.GetProjectBySlug)
 
 	admin := api.Group("/admin")
-	admin.Use(middleware.Auth())
+	admin.Use(middleware.Auth(), middleware.RequireOwnerRole())
 	admin.GET("/profile", profileHandler.GetAdmin)
 	admin.PUT("/profile", profileHandler.Put)
 	admin.GET("/contacts", contactHandler.GetAdminContacts)

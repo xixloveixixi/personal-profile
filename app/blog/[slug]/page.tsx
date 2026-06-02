@@ -20,13 +20,13 @@ export async function generateStaticParams() {
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {
   const postId = decodeURIComponent(params.slug)
-  const post = await getPostById(postId)
+  const post = await getPostById(postId).catch(() => null)
 
   if (!post) {
     notFound()
   }
 
-  const blocks = await getPostBlocks(postId)
+  const blocks = await getPostBlocks(postId).catch(() => [])
 
   return (
     <article className="max-w-3xl mx-auto py-12 px-4 relative z-10">

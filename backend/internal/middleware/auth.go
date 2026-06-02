@@ -41,6 +41,7 @@ func Auth() gin.HandlerFunc {
 			c.Set("claims", claims)
 			c.Set("role", claims["role"])
 			c.Set("sub", claims["sub"])
+			c.Set("user_id", claims["user_id"])
 		}
 
 		c.Next()

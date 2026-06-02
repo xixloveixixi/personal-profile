@@ -162,10 +162,10 @@
 
 #### Gate F：沉淀闸门
 
-- [ ] 是否更新 `progress-log.md`？
-- [ ] 是否把踩坑写入 `pitfalls.md`？
-- [ ] 是否同步更新 `schema.md` / `api-contract.md` 的"已冻结"区块？
-- [ ] 是否明确 Stage 3 范围（前端切 API or 引入 sys_user）？
+- [x] 是否更新 `progress-log.md`？
+- [x] 是否把踩坑写入 `pitfalls.md`？
+- [x] 是否同步更新 `schema.md` / `api-contract.md` 的"已冻结"区块？
+- [x] 是否明确 Stage 3 范围（前端切 API or 引入 sys_user）？
 
 ### Stage 2 设计决策（Day 2 冻结）
 
@@ -204,7 +204,7 @@
 
 ---
 
-## 当前阶段：阶段 3 前端公开页切 API (FB-1)
+## 阶段 3 前端公开页切 API (FB-1)（已完成）
 
 ### 阶段目标
 
@@ -264,9 +264,9 @@
 
 #### Gate F：沉淀闸门
 
-- [ ] 是否更新 `progress-log.md`？
-- [ ] 踩坑写入 `pitfalls.md`（特别是 SSR fetch / 环境变量类）？
-- [ ] 是否明确 FB-2 范围（owner 后台管理 UI）？
+- [x] 是否更新 `progress-log.md`？
+- [x] 踩坑写入 `pitfalls.md`（特别是 SSR fetch / 环境变量类）？
+- [x] 是否明确 FB-2 范围（owner 后台管理 UI）？
 
 ### 节奏建议
 
@@ -290,3 +290,262 @@
 - [x] 后端 4 张表 API 可用（`curl /api/public/profile` 等返回正确 JSON）。
 - [x] 范围已确认（4 张公开页切 API，不做后台、不动博客）。
 
+---
+
+## 阶段 4 Owner 后台管理 UI (FB-2)（已完成）
+
+### 阶段目标
+
+实现 `/admin` 后台管理界面：登录页 + 4 张表（profile / contact / skill / site_config）的 CRUD 管理面板，Zustand 管理登录态，middleware 路由守卫。
+
+### 本阶段做什么
+
+- 创建 `/admin/login` 登录页，调用 `POST /api/auth/login` 获取 token。
+- Zustand + persist 保存登录态（token / username）。
+- Next.js middleware 路由守卫：未登录跳 `/admin/login`。
+- 4 张表的 Antd Table 列表 + Form 编辑（Modal 形式）。
+- 复用 `lib/api/client.ts`，新增 `lib/api/admin.ts`（带 Bearer token）。
+
+### 本阶段不做什么
+
+- 不做 sys_user / 权限系统（FB-3 再做）。
+- 不动公开页（FB-1 已完成）。
+- 不做博客管理。
+- 不做 ISR / 缓存优化。
+
+### 闸门检查
+
+#### Gate A：需求闸门
+
+- [x] 本阶段只做 `/admin` 后台管理 UI，不动公开页。
+- [x] 做的范围：登录页 + 4 张表的 Table + Form 编辑面板。
+- [x] 不做权限系统、博客管理。
+- [x] 验收标准：登录后能增删改查 4 张表，刷新后登录态保持。
+
+#### Gate B：设计闸门
+
+- [x] 路由结构：`/admin/login`、`/admin/dashboard`、`/admin/profile`、`/admin/contacts`、`/admin/skills`、`/admin/site-config`。
+- [x] 登录态：Zustand + persist（localStorage），store key = `admin-auth`。
+- [x] 路由守卫：`middleware.ts`，matcher 覆盖 `/admin` 与 `/admin/*`，排除 `/admin/login`。
+- [x] UI 组件库：Antd 5（已安装）。
+- [x] API 调用：复用 `lib/api/client.ts`，新增 `lib/api/admin.ts`（带 Bearer token）。
+
+#### Gate C：学习闸门
+
+- [x] Next.js middleware 路由守卫基本用法。
+- [x] Zustand + persist 基本用法。
+- [x] Antd Table + Form 最小用法。
+
+#### Gate D：编码闸门
+
+- [x] `antd` 5.29.3 已在 package.json。
+- [x] 后端 `POST /api/auth/login` 已实现（router.go 已注册）。
+- [x] 4 张表 admin CRUD 接口已在 `api-contract.md` 冻结。
+
+#### Gate E：验证闸门
+
+- [x] `/admin/login` 登录成功后跳转 `/admin/dashboard`。
+- [x] 未登录访问 `/admin/profile` 自动跳 `/admin/login`。
+- [x] 刷新页面后登录态保持。
+- [x] 4 张表 CRUD 操作正常（新增 / 编辑 / 删除 / 列表）。
+- [x] `npm run build` 通过。
+
+#### Gate F：沉淀闸门
+
+- [x] `progress-log.md` 已更新。
+- [x] 踩坑写入 `pitfalls.md`。
+- [x] FB-3 范围已明确。
+
+### 进入前置条件
+
+- [x] FB-1 Gate E/F 全部通过。
+- [x] 后端 Stage 2 admin CRUD 接口可用。
+- [x] FB-2 Gate A-D 已确认。
+
+---
+
+## 阶段 5 sys_user 与权限 (FB-3)（已完成）
+
+### 阶段目标
+
+引入 `sys_user` 表，登录改为 DB 校验（bcrypt），admin 接口增加 `RequireOwnerRole` 中间件；前端做最小兼容（登录响应新增 `user.id`），不新增复杂权限 UI。
+
+### 本阶段做什么
+
+- 新增 `sys_user` 表（DDL + migration + 种子 SQL）。
+- 改造 `POST /api/auth/login`：从 DB 查用户 + bcrypt 校验密码。
+- 改造 `GET /api/auth/me`：从 DB 查 sys_user 返回用户信息。
+- 新增 `RequireOwnerRole` 中间件，挂到 `/api/admin/*` 路由组。
+- 删除 `config.go` 中的硬编码 `OwnerUsername` / `OwnerPassword`。
+- JWT claims 增加 `user_id` 字段。
+- 前端 `lib/stores/auth.ts` 适配登录响应 `user.id` 字段。
+- 种子 SQL 灌入初始 owner 用户（username=owner, password=bcrypt("owner123")）。
+
+### 本阶段不做什么
+
+- 不做用户注册/邀请接口。
+- 不做 RBAC 多角色（仅 owner）。
+- 不动公开页、后台 CRUD UI、博客。
+- 不做修改密码接口（留后续）。
+- 不做多用户体系。
+
+### 闸门检查
+
+#### Gate A：需求闸门
+
+- [x] 是否确认本阶段只做 sys_user + 登录改 DB + admin role 校验？
+- [x] 是否确认不做用户注册/多角色/修改密码？
+- [x] 验收标准：旧硬编码凭据删除后，种子用户能登录并操作 admin 接口；错误 role 返回 403。
+
+#### Gate B：设计闸门
+
+- [x] `schema.md` 中 `sys_user` DDL 是否已冻结？
+- [x] `api-contract.md` 中 login/me 改造 + RequireOwnerRole 中间件是否已冻结？
+- [x] 密码哈希策略是否确认（bcrypt, cost=10）？
+- [x] JWT claims 结构是否确认（增加 `user_id`）？
+- [x] 种子 SQL 策略是否确认（INSERT ... ON DUPLICATE KEY UPDATE）？
+
+#### Gate C：学习闸门
+
+- [x] 是否只学 `golang.org/x/crypto/bcrypt` 最小 API（`GenerateFromPassword` / `CompareHashAndPassword`）？
+- [x] 是否只学 Gin middleware 链式调用（Auth → RequireOwnerRole → handler）？
+
+#### Gate D：编码闸门
+
+- [ ] `go build ./...` 当前通过？
+- [ ] 是否明确新增文件位置：`internal/model/sys_user.go`、`internal/repository/sys_user.go`、`internal/middleware/role.go`？
+- [ ] 是否确认不影响公开页和后台 CRUD 现有功能？
+- [ ] 验收方式：curl 全通 + 种子数据可灌入 + `npm run build` 通过。
+
+#### Gate E：验证闸门
+
+- [x] `sys_user` 表已建，种子 owner 用户可灌入。
+- [x] `POST /api/auth/login` 使用 DB 校验，旧硬编码已删除。
+- [x] 正确密码登录成功返回 token + user info；错误密码返回 `40100`。
+- [x] `GET /api/auth/me` 从 DB 返回用户信息。
+- [x] `/api/admin/*` 接口：有效 token + role=owner 正常访问；role 不匹配返回 `40300`。
+- [x] 前端 `npm run build` 通过，登录流程不受影响。
+- [x] `go build ./...` 通过。
+
+#### Gate F：沉淀闸门
+
+- [x] `progress-log.md` 已更新。
+- [x] 踩坑写入 `pitfalls.md`。
+- [x] 下一阶段范围已明确。
+
+### 节奏建议
+
+| 天数 | 目标 | 产出 |
+| --- | --- | --- |
+| Day 1 | 确认 Gate A/B，冻结契约，写 migration + 种子 SQL | sys_user 表可用 |
+| Day 2 | 实现 sys_user model + repository + 改造 login handler | bcrypt 登录跑通 |
+| Day 3 | 改造 /auth/me + 新增 RequireOwnerRole + 删硬编码 | admin 全链路跑通 |
+| Day 4 | 前端适配 + npm run build + 全量 curl 验收 | Gate E 全通 |
+| Day 5 | 阶段复盘 + 文档更新 | 进入下一阶段 |
+
+### 降级策略
+
+- bcrypt 引入卡住：先用 SHA256+salt（安全性稍低但可快速推进），后续补 bcrypt。
+- RequireOwnerRole 影响面大：先仅在 router 中加空中间件占位，验收时手动确认 role claim 存在。
+- 前端适配复杂：先不存 userId，仅确保登录响应字段向后兼容。
+
+### 进入前置条件
+
+- [x] FB-2 Gate E/F 全部通过。
+- [x] `schema.md` 中 `sys_user` DDL 已冻结。
+- [x] `api-contract.md` 中 login/me 改造接口已冻结。
+
+---
+
+## 阶段 6：项目展示后端化 + 前端切 API + 后台 CRUD (FB-4)
+
+### 阶段目标
+
+把项目展示数据从前端静态 JSON（`content/projects/*.json`）迁移到 Go API + MySQL，实现公开读 + admin CRUD，前端切 API 后删除静态数据文件。
+
+### 本阶段做什么
+
+- 新增 `portfolio_project` 表（DDL + migration + 种子 SQL）。
+- 实现公开读接口：`GET /api/public/projects`（列表）、`GET /api/public/projects/:slug`（详情）。
+- 实现 owner 写接口：`GET/POST/PUT/DELETE /api/admin/projects(/:id)`。
+- 前端 `lib/api/public.ts` 新增 `getPublicProjects` / `getPublicProjectBySlug`。
+- 前端 portfolio 页面从 `fs.readFileSync` 改为调用后端 API。
+- 后台新增 `/admin/projects` 管理页面（Antd Table + Form）。
+- 删除 `content/projects/*.json` 静态数据文件和 `lib/content/projects.ts`。
+- 种子 SQL 灌入当前 5 个项目数据。
+
+### 本阶段不做什么
+
+- 不做图片上传（继续用 `public/images/` 静态引用）。
+- 不做分页、排序参数、模糊搜索（全量返回）。
+- 不做学习工作台、LangChain。
+- 不动博客。
+- 不拆 `portfolio_project_tech` 子表。
+
+### 闸门检查
+
+#### Gate A：需求闸门
+
+- [x] 是否确认本阶段只做 portfolio_project 单表的后端化 + 前端切 API + 后台 CRUD？
+- [x] 是否确认不做图片上传、不拆技术栈子表、不做学习工作台？
+- [x] 验收标准：curl 全通 + 前端 portfolio 页面表现不变 + 后台可增删改查 + `npm run build` 通过？
+
+#### Gate B：设计闸门
+
+- [x] `schema.md` 中 `portfolio_project` DDL 是否已冻结？
+- [x] `api-contract.md` 中 6 个接口（2 公开读 + 4 admin 写）是否已冻结？
+- [x] JSON 数组字段（technologies/gallery）存储与序列化方式是否确认？
+- [x] 前端 API client 新增函数位置是否确认（`lib/api/public.ts`）？
+- [x] 后台页面路由是否确认（`/admin/projects`）？
+
+#### Gate C：学习闸门
+
+- [x] 是否了解 GORM JSON 字段的读写方式（`datatypes.JSON` 或自定义 Scanner/Valuer）？
+- [x] 是否了解 Next.js Server Component 中 `generateStaticParams` 的动态化改造？
+
+#### Gate D：编码闸门
+
+- [ ] `go build ./...` 当前通过？
+- [ ] `npm run build` 当前通过？
+- [ ] 是否确认新增文件位置：`internal/model/portfolio_project.go`、`internal/repository/portfolio_project.go`、`internal/handler/project.go`？
+- [ ] 是否确认前端切 API 不影响 SEO（slug 路由保持、meta 保持）？
+- [ ] 验收方式：curl 全通 + 种子数据灌入 + `npm run build` + 浏览器确认。
+
+#### Gate E：验证闸门
+
+- [ ] `portfolio_project` 表已建，种子数据（5 个项目）可灌入。
+- [ ] 公开 API：`GET /api/public/projects` 返回列表；`GET /api/public/projects/:slug` 返回详情。
+- [ ] Admin API：6 个接口 curl 全通（带 token + role=owner）。
+- [ ] 前端 portfolio 列表页 + 详情页表现与迁移前一致。
+- [ ] 后台 `/admin/projects` CRUD 操作正常。
+- [ ] `content/projects/*.json` 与 `lib/content/projects.ts` 已删除。
+- [ ] `npm run build` 通过。
+- [ ] `go build ./...` 通过。
+
+#### Gate F：沉淀闸门
+
+- [ ] `progress-log.md` 已更新。
+- [ ] 踩坑写入 `pitfalls.md`。
+- [ ] 下一阶段范围已明确。
+
+### 节奏建议
+
+| 天数 | 目标 | 产出 |
+| --- | --- | --- |
+| Day 1 | 确认 Gate A/B，冻结契约，写 migration + 种子 SQL | portfolio_project 表可用 |
+| Day 2 | 实现 model + repository + 6 个 handler + 路由注册 | 后端 curl 全通 |
+| Day 3 | 前端切 API：portfolio 列表页 + 详情页 | 前端不读本地 JSON |
+| Day 4 | 后台 /admin/projects CRUD 页面 | 后台可管理项目 |
+| Day 5 | 删静态文件 + build 验收 + Gate F | 阶段完成 |
+
+### 降级策略
+
+- GORM JSON 字段卡住：改用 TEXT 字段 + handler 层 json.Marshal/Unmarshal。
+- generateStaticParams 改造复杂：portfolio 详情页改 `force-dynamic`。
+- 后台 CRUD 页面耗时：先只实现列表 + 新增，编辑/删除后补。
+
+### 进入前置条件
+
+- [x] FB-3 Gate E/F 全部通过。
+- [x] `schema.md` 中 `portfolio_project` DDL 已冻结。
+- [x] `api-contract.md` 中 6 个接口已冻结。

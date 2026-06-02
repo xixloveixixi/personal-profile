@@ -14,7 +14,6 @@ export async function generateStaticParams() {
     slug: project.slug,
   }))
 }
-
 interface ProjectPageProps {
   params: {
     slug: string

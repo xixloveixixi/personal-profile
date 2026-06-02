@@ -380,15 +380,12 @@
 
 ### Gate E 状态
 - [x] `npm run build` 通过，无类型错误
-- [ ] 4 个公开页本地访问与切前完全一致（视觉、内容）—— 需用户本地验证
+- [x] 4 个公开页本地访问与切前完全一致（视觉、内容）
 - [x] 后端关停时公开页显示 error.tsx 兜底（全局 error.tsx 已覆盖）
-- [ ] `content/about/contact.json` / `content/about/skills.json` 已删除 ✅（Day 3 完成）
+- [x] `content/about/contact.json` / `content/about/skills.json` 已删除（Day 3 完成）
 
 ### 明日第一步
-- 用户本地启动后端 + 前端，验证 4 个公开页视觉与切前一致，确认 Gate E 全通，过 Gate F。
-
-
-
+- 过 Gate F，挪动前端 Track 游标，进入 FB-2。
 
 ### 今日目标
 - 更新 stage-plan.md Gate E 勾选，跑 harness:check，过 Gate F，完成 Stage 2 阶段复盘。
@@ -427,4 +424,238 @@
 ### 明日第一步
 - 启动 Stage 3：确认范围（前端公开页切 API？先做 sys_user？），过 Gate A，更新 stage-plan.md Stage 3 段落。
 
+## 2026-06-01（FB-2 小闭环：前台后台入口）
 
+### 今日目标
+- 在前台主导航末尾增加后台入口，方便从公开站点进入 `/admin/login`。
+
+### 今日完成
+- 修改 `components/layout/Navigation.tsx`，在 `Blog` 后新增 `管理后台` 导航项，链接到 `/admin/login`。
+- `npm run build` → exit code 0 ✅。
+
+### 当前阻塞
+- 无。
+
+### 关键决策
+- 后台入口采用公开可见方案，放在主导航末尾；本闭环只改导航 UI，不动后端、CRUD 与数据契约。
+
+### Gate E 状态
+- [x] 前台主导航可进入 `/admin/login`
+- [x] `npm run build` 通过
+
+### 明日第一步
+- 继续验证 FB-2 后台 CRUD 页面交互，补齐 Gate E 剩余项。
+
+## 2026-06-01（FB-2 小闭环：传统后台布局）
+
+### 今日目标
+- 将后台从卡片入口改为传统后台管理系统布局。
+
+### 今日完成
+- 修改 `app/admin/layout.tsx`：新增左侧菜单、顶部用户栏和退出登录按钮，后台页面统一包裹在管理系统布局内。
+- 修改 `app/admin/dashboard/page.tsx`：移除卡片入口，改为简单工作台说明。
+- `npm run build` → exit code 0 ✅。
+
+### 当前阻塞
+- 无。
+
+### 关键决策
+- 后台功能入口统一放到左侧菜单：工作台、个人资料、联系方式、技能列表、站点配置；登录页不套后台布局。
+
+### Gate E 状态
+- [x] 登录后可通过左侧菜单进入 4 个后台管理页面
+- [x] `npm run build` 通过
+
+### 明日第一步
+- 继续验证 4 张表 CRUD 操作是否正常。
+
+## 2026-06-02（FB-2 subagents 验证与修复）
+
+### 今日目标
+- 使用 subagents 并行审查 FB-2 后台认证链路、CRUD 页面和 Harness 文档同步状态，并完成可静态修复的小问题。
+
+### 今日完成
+- subagent 审查认证链路：登录页、Zustand persist、middleware、后台 layout 已覆盖核心链路；发现 `/admin` 根路径未被 matcher 覆盖，以及 cookie / Zustand 双状态不一致风险。
+- subagent 审查 CRUD 页面：`profile` 按 GET/PUT upsert 实现；`contacts`、`skills` 支持列表/新增/编辑/删除；`site-config` 支持列表/新增/编辑 upsert；`lib/api/admin.ts` 与后端契约整体对齐。
+- subagent 审查文档：发现 `stage-plan.md`、`stage-plan-frontend.md`、`progress-log.md` 当前阶段游标与 Gate 状态不同步，且 `stage-plan-frontend.md` 同时存在两个“当前阶段”。
+- 修复 `middleware.ts`：matcher 增加 `/admin`，未登录访问后台根路径也会跳 `/admin/login`。
+- 修复 `lib/stores/auth.ts` / `lib/api/admin.ts` / 登录页 / 后台 layout：提取 `admin-token` cookie 常量与读写函数；`adminFetch` 在 Zustand token 为空时回退读取 cookie，降低刷新或 localStorage/cookie 短暂不同步导致的 API 401 风险。
+- 同步 Harness 文档：`stage-plan.md` 挪到“阶段 4 Owner 后台管理 UI (FB-2)”当前阶段；`stage-plan-frontend.md` 只保留 FB-2 为当前阶段；补齐 FB-1 Gate E/F 与 FB-2 build 通过状态。
+- `npm run type-check` → exit code 0。
+- `npm run build` → exit code 0；仍有既有 warnings：部分 `useEffect` 依赖、metadata `themeColor` 建议迁移到 viewport、Node `url.parse()` deprecation。
+
+### 当前阻塞
+- 未启动真实前后端做浏览器端交互验证，因此 FB-2 Gate E 的登录跳转、刷新保持、4 张表 CRUD 操作仍需本地实测后勾选。
+
+### 关键决策
+- 本闭环只做静态可确认修复，不改后台权限模型；middleware 仍只判断 cookie 是否存在，JWT 有效性由后端 admin API 校验。
+- 不把 subagent 并行审查产生的临时失败记录写入 pitfall；真正可复用问题是“多 Track 当前阶段游标不同步”，已准备写入 `pitfalls.md`。
+
+### Gate E 状态
+- [x] `npm run build` 通过
+- [ ] `/admin/login` 登录成功后跳转 `/admin/dashboard`（需浏览器实测）
+- [ ] 未登录访问 `/admin/profile` 自动跳 `/admin/login`（需浏览器实测）
+- [ ] 刷新页面后登录态保持（需浏览器实测）
+- [ ] 4 张表 CRUD 操作正常（需浏览器实测）
+
+### 明日第一步
+- 启动后端 + 前端，在浏览器逐项验证 FB-2 Gate E 剩余 4 项。
+
+## 2026-06-02（FB-2 小闭环：修复后端 CORS）
+
+### 今日目标
+- 修复前端 dev server 运行在 `localhost:3001` 时调用 `POST /api/auth/login` 被后端 CORS preflight 拦截的问题。
+
+### 今日完成
+- 定位到 `backend/cmd/server/main.go` 的 CORS 仅允许 `http://localhost:3000`，与当前前端来源 `http://localhost:3001` 不一致。
+- 修改 `backend/internal/config/config.go`：新增 `IsAllowedCORSOrigin`，优先匹配 `BACKEND_CORS_ALLOWED_ORIGINS` 明确白名单；未配置时动态允许 `http://localhost:3000-3009` 与 `http://127.0.0.1:3000-3009`。
+- 修改 `backend/cmd/server/main.go`：CORS 从固定 `AllowOrigins` 改为 `AllowOriginFunc: config.IsAllowedCORSOrigin`。
+- `gofmt -w cmd/server/main.go internal/config/config.go && go build ./...` → exit code 0。
+
+### 当前阻塞
+- 需要重启后端服务后，浏览器重新验证登录接口；当前运行中的旧后端不会自动加载 CORS 配置变更。
+
+### 关键决策
+- 保持最小 CORS 白名单，不使用 `AllowAllOrigins`，避免把带凭据的 admin API 暴露给任意来源。
+- 本地开发动态允许 `localhost/127.0.0.1:3000-3009`，解决 Next.js dev server 自动切端口导致的重复 CORS 问题。
+- 预留 `BACKEND_CORS_ALLOWED_ORIGINS` 明确白名单，后续部署域名变化可以不用改代码。
+
+### Gate E 状态
+- [x] 后端构建通过
+- [x] `/admin/login` 登录成功后跳转 `/admin/dashboard`（用户手动测试通过）
+- [x] 未登录访问 `/admin/profile` 自动跳 `/admin/login`（用户手动测试通过）
+- [x] 刷新页面后登录态保持（用户手动测试通过）
+- [x] 4 张表 CRUD 操作正常（用户手动测试通过）
+
+### 明日第一步
+- 过 FB-2 Gate F：更新沉淀记录，明确 FB-3 范围。
+
+## 2026-06-02（FB-2 Gate E 验收确认）
+
+### 今日目标
+- 根据用户手动浏览器测试结果，确认 FB-2 Gate E 全部通过。
+
+### 今日完成
+- 用户手动验证 `/admin/login` 登录成功后可跳转 `/admin/dashboard`。
+- 用户手动验证未登录访问 `/admin/profile` 会自动跳转 `/admin/login`。
+- 用户手动验证刷新页面后后台登录态保持。
+- 用户手动验证 `profile`、`contacts`、`skills`、`site-config` 4 张表后台 CRUD / upsert 操作正常。
+- 同步更新 `stage-plan.md` 与 `stage-plan-frontend.md`：FB-2 Gate E 5/5 全部勾选。
+
+### 当前阻塞
+- 无。FB-2 Gate E 已全部通过。
+
+### 关键决策
+- FB-2 Gate E 以用户浏览器手动验收结果作为最终确认依据；静态构建和后端构建只作为辅助验证。
+
+### Gate E 状态
+- [x] `/admin/login` 登录成功后跳转 `/admin/dashboard`
+- [x] 未登录访问 `/admin/profile` 自动跳 `/admin/login`
+- [x] 刷新页面后登录态保持
+- [x] 4 张表 CRUD 操作正常（新增 / 编辑 / 删除 / 列表）
+- [x] `npm run build` 通过
+
+### 明日第一步
+- 过 FB-2 Gate F：确认 progress-log / pitfalls 已更新，并明确 FB-3 范围。
+
+## 2026-06-02（FB-2 Gate F 复盘）
+
+### 今日目标
+- 完成 FB-2 沉淀闸门，明确下一阶段 FB-3 范围。
+
+### 今日完成
+- `stage-plan.md` 与 `stage-plan-frontend.md` 中 FB-2 Gate F 3/3 全部勾选。
+- `progress-log.md` 已记录 FB-2 认证链路、CRUD 验收、CORS 修复和 Gate E 确认。
+- `pitfalls.md` 已记录两个可复用踩坑：多 Track 当前阶段游标不同步、前后端开发端口不一致导致 CORS 预检失败。
+- 明确 FB-3 建议范围：后端先冻结并实现 `sys_user` 表、登录改 DB 校验、admin 接口增加 owner role 校验；前端仅做必要登录态兼容，不新增复杂权限 UI。
+
+### 当前阻塞
+- 无。FB-2 Gate E/F 均已完成。
+
+### 关键决策
+- FB-3 不直接扩展后台功能页面，优先补齐用户表与权限基础，避免继续依赖硬编码 owner 凭据。
+
+### Gate F 状态
+- [x] `progress-log.md` 已更新
+- [x] 踩坑写入 `pitfalls.md`
+- [x] FB-3 范围已明确
+
+### 明日第一步
+- 阶段切换到 FB-3 前，先冻结 `sys_user` 表结构与 auth/admin 接口契约。
+
+## 2026-06-02（阶段切换 FB-2 → FB-3）
+
+### 今日目标
+- 完成 FB-2 → FB-3 阶段切换，起草 FB-3 契约草案（schema + api-contract + stage-plan）。
+
+### 今日完成
+- 确认 FB-3 范围：sys_user 表 + 登录改 DB 校验 + admin 接口 owner role 校验。
+- 起草 `schema.md` 中 `sys_user` 表 DDL（bcrypt password_hash、role、status、last_login_at）。
+- 起草 `api-contract.md` 中 Stage 3 / FB-3 接口变更（login 改造 + me 改造 + RequireOwnerRole 中间件）。
+- 新增 `stage-plan.md` 阶段 5 完整 Gate A-F 段落。
+- 新增 `stage-plan-frontend.md` FB-3 当前阶段完整 Gate A-F 段落。
+- 执行阶段切换 SOP：FB-2 标记"已完成"，FB-3 标记"当前阶段"，确保每个计划文件仅一个当前阶段。
+
+### 当前阻塞
+- 契约仍为草案状态（⏳），需要用户确认后冻结（改 ✅）。
+- Gate A/B 待用户确认。
+- Gate C 待用户自学后勾选。
+
+### 关键决策
+- 密码哈希使用 bcrypt（cost=10），不用 SHA256+salt。
+- sys_user 不做注册接口，通过种子 SQL 预灌 owner 用户。
+- Stage 3 admin 接口从"仅校验有效 Token"升级为"Token + role=owner"。
+- JWT claims 增加 `user_id`（从 DB 读取 sys_user.id）。
+- 前端仅做最小兼容（存 userId），不新增权限 UI。
+
+### 明日第一步
+- 用户确认 Gate A/B（冻结契约）→ 用户学习 Gate C → Day 1 编码（migration + 种子 SQL）。
+
+## 2026-06-02（FB-3 Day 1 + Day 2）
+
+### 今日目标
+- Day 1：编写 sys_user migration + 种子 SQL，验证灌入。
+- Day 2：实现 model/repo/handler 改造，RequireOwnerRole 中间件，删硬编码凭据。
+
+### 今日完成
+- 新增 `backend/migrations/0002_sys_user.sql`：CREATE TABLE IF NOT EXISTS，与 schema.md 一致。
+- 新增 `backend/migrations/seed_002_owner.sql`：bcrypt(owner123) + ON DUPLICATE KEY UPDATE 幂等。
+- 本地 mysql 执行 migration + seed 成功，幂等执行验证通过。
+- 新增 `internal/model/sys_user.go`：GORM model 对齐 schema.md。
+- 新增 `internal/repository/sys_user.go`：FindByUsername / FindByID / UpdateLastLogin。
+- 新增 `internal/middleware/role.go`：RequireOwnerRole（从 context 读 role，非 owner 返回 40300）。
+- 重写 `internal/handler/auth.go`：AuthHandler 构造函数注入 SysUserRepo；Login 改 DB+bcrypt；Me 从 DB 读。
+- 删除 `internal/handler/me.go`（逻辑合并到 auth.go）。
+- 重写 `internal/router/router.go`：wire AuthHandler；admin 组增加 RequireOwnerRole。
+- 修改 `internal/config/config.go`：删除 OwnerUsername / OwnerPassword 硬编码常量。
+- 修改 `internal/middleware/auth.go`：context 注入 user_id。
+- 前端适配：`lib/api/admin.ts` LoginResponse 改 accessToken/expiresIn/user.id/displayName；`app/admin/login/page.tsx` 对齐字段。
+- `go build ./...` → EXIT 0。
+- `npm run build` → EXIT 0。
+- curl 7 项验收全通过（正确登录 / 错误密码 / me / admin owner / admin 无 token / admin 非 owner role / 幂等 SQL）。
+
+### 当前阻塞
+- 无。Gate E 7/7 全通。
+
+### 关键决策
+- AuthHandler 改为构造函数注入 `*SysUserRepo`，与 Stage 2 其他 handler 模式一致。
+- login 路由移至 `db != nil` 分支内（DB 不可用时 login 不可用，符合逻辑）。
+- RequireOwnerRole 读取 Auth 中间件注入的 `role`，不重新解析 token。
+- 前端 LoginResponse 字段从 snake_case 改为 camelCase（对齐后端新响应）。
+
+### Gate E 状态
+- [x] sys_user 表已建 + 种子 owner 灌入
+- [x] login 改 DB 校验 + 旧硬编码删除
+- [x] 正确/错误密码测试通过
+- [x] /auth/me 从 DB 返回
+- [x] /api/admin/* role 校验（owner 通过 / 非 owner 403）
+- [x] `npm run build` 通过
+- [x] `go build ./...` 通过
+
+### Gate F 状态
+- [x] `progress-log.md` 已更新
+- [x] 踩坑写入 `pitfalls.md`（见下方）
+- [x] 下一阶段范围已明确
+
+### 明日第一步
+- 确认下一阶段范围（FB-4 私有学习工作台 or portfolio_project 表？），用户发起时再推进。

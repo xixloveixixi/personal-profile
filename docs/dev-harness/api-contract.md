@@ -1,7 +1,7 @@
 # API 契约文档
 
 > 业务后端开发前必须先在此文件中冻结接口契约。
-> 当前阶段：Stage 2 已冻结 4 张公开表的读写接口（2026-05-19）。
+> 当前阶段：Stage 3 / FB-3 sys_user 与权限 — 已冻结（2026-06-02）。
 > 权威源：`tech_design/ai-learning-platform/SDD-AI学习规划与成长记录平台.md` 第 9 章。
 > 本文件是"将进入实现"的子集，必须先于 handler 代码存在。
 
@@ -276,16 +276,209 @@
 - **关联表**：`site_config`。
 - **备注**：按 `config_key` 唯一索引 upsert。
 
-## 待冻结接口
+## 待冻结接口（Stage 3 / FB-3）
 
-> 当前无。Stage 2 范围已全部冻结。
+> 状态：✅ 已冻结于 2026-06-02。
+
+### 变更接口（原 Stage 1 接口改造）
+
+#### POST /api/auth/login（改造）
+
+- **作用**：登录认证，从 DB 校验用户名密码（替代硬编码）。
+- **鉴权**：公开。
+- **请求参数**：JSON Body
+  | 字段 | 类型 | 必填 | 说明 |
+  |------|------|------|------|
+  | username | string | 是 | 登录用户名 |
+  | password | string | 是 | 明文密码（HTTPS 传输） |
+- **成功响应 data**：
+  ```json
+  {
+    "accessToken": "eyJ...",
+    "expiresIn": 86400,
+    "user": {
+      "id": 1,
+      "username": "owner",
+      "role": "owner",
+      "displayName": "Yixi Jiang"
+    }
+  }
+  ```
+- **错误码**：`40001` 参数缺失/空；`40100` 用户名或密码错误；`50000` DB 异常。
+- **关联表**：`sys_user`。
+- **备注**：
+  - 密码校验使用 `bcrypt.CompareHashAndPassword`。
+  - 登录成功时更新 `sys_user.last_login_at`。
+  - JWT claims 增加 `user_id` 字段（从 DB 读取 `sys_user.id`）。
+  - 硬编码 `OwnerUsername` / `OwnerPassword` 常量删除。
+
+#### GET /api/auth/me（改造）
+
+- **作用**：获取当前登录用户信息（从 DB 读取）。
+- **鉴权**：Bearer Token。
+- **请求参数**：无。
+- **成功响应 data**：
+  ```json
+  {
+    "id": 1,
+    "username": "owner",
+    "role": "owner",
+    "displayName": "Yixi Jiang",
+    "email": "contact@example.com"
+  }
+  ```
+- **错误码**：`40100` 未登录/Token 无效；`40400` 用户不存在（DB 中 ID 匹配失败）；`50000` DB 异常。
+- **关联表**：`sys_user`。
+- **备注**：从 JWT claims 中取 `user_id`，查 `sys_user` 表返回。
+
+### 新增中间件
+
+#### RequireOwnerRole 中间件
+
+- **作用**：在 `middleware.Auth()` 之后追加 role 校验，确保只有 `role=owner` 的用户能访问 `/api/admin/*`。
+- **实现**：从 Gin context 读取 `role`（Auth 中间件已注入），非 `owner` 返回 `40300`。
+- **影响范围**：`/api/admin/*` 全部路由组。
+- **错误码**：`40300` 权限不足。
+
+### 前端兼容变更
+
+- `lib/api/admin.ts`：无需改动（Bearer token 格式不变）。
+- `lib/stores/auth.ts`：登录响应中 `user` 字段新增 `id`，store 可选存储 `userId`。
+- `middleware.ts`：无需改动（仍判断 cookie 是否存在）。
 
 ## 本阶段不做
 
-- 不做 `sys_user` 相关接口（登录仍走 Stage 1 硬编码）。
-- 不做 `portfolio_project` / `portfolio_project_tech`（留 Stage 3 或后续阶段）。
 - 不做分页、排序参数、模糊搜索（`GET` 全量返回即可）。
 - 不做资源上传 `POST /api/admin/assets/upload`（SDD 9.6，留后续阶段）。
+- 不做用户注册接口 / 修改密码接口（通过种子 SQL 或后续 admin 接口管理）。
+
+## 待冻结接口（Stage 6 / FB-4：portfolio_project）
+
+> 状态：✅ 已冻结于 2026-06-02。下列接口允许进入 Gate D 编码。
+
+### 公开读接口
+
+#### GET /api/public/projects
+
+- **作用**：获取公开项目列表。
+- **鉴权**：公开。
+- **请求参数**：无。
+- **成功响应 data**：
+  ```json
+  [
+    {
+      "id": 1,
+      "slug": "cream-design",
+      "title": "Cream-Design 组件库",
+      "shortDescription": "从零构建的 React 组件库...",
+      "technologies": ["React 19", "TypeScript", "Rollup"],
+      "githubUrl": "https://github.com/...",
+      "demoUrl": "",
+      "featuredImage": "/images/cream-design-1.png",
+      "gallery": ["/images/cream-design-1.png", "/images/cream-design-2.png"],
+      "publishedAt": "2025-01-15",
+      "featured": true,
+      "sortOrder": 1
+    }
+  ]
+  ```
+- **错误码**：`50000` DB 异常。
+- **关联表**：`portfolio_project`。
+- **备注**：仅返回 `is_public=1`；按 `sort_order ASC, id ASC` 排序；不分页。列表不返回 longDescription/problem/solution/challenges/results（体积控制）。
+
+#### GET /api/public/projects/:slug
+
+- **作用**：获取单个项目详情（含完整描述字段）。
+- **鉴权**：公开。
+- **请求参数**：path `slug`。
+- **成功响应 data**：
+  ```json
+  {
+    "id": 1,
+    "slug": "cream-design",
+    "title": "Cream-Design 组件库",
+    "shortDescription": "...",
+    "longDescription": "详细介绍...",
+    "problem": "...",
+    "solution": "...",
+    "challenges": "...",
+    "results": "...",
+    "technologies": ["React 19", "TypeScript"],
+    "githubUrl": "https://...",
+    "demoUrl": "",
+    "featuredImage": "/images/cream-design-1.png",
+    "gallery": ["/images/cream-design-1.png"],
+    "publishedAt": "2025-01-15",
+    "featured": true,
+    "sortOrder": 1
+  }
+  ```
+- **错误码**：`40400` slug 对应项目不存在或非公开；`50000` DB 异常。
+- **关联表**：`portfolio_project`。
+- **备注**：仅返回 `is_public=1` 的记录，非公开项目返回 40400。
+
+### Owner 写接口
+
+> 共同要求：Bearer Token + role=owner，否则返回 `40100` / `40300`。
+
+#### GET /api/admin/projects
+
+- **作用**：获取全部项目列表（含非公开项）。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：无。
+- **成功响应 data**：数组，在公开列表基础上额外含 `isPublic`、`longDescription` 等全字段。
+- **错误码**：`40100` / `40300` / `50000`。
+- **关联表**：`portfolio_project`。
+- **备注**：按 `sort_order ASC, id ASC` 全量返回。
+
+#### POST /api/admin/projects
+
+- **作用**：新增项目。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：JSON Body
+  | 字段 | 类型 | 必填 | 说明 |
+  |------|------|------|------|
+  | slug             | string   | 是 | URL 友好标识，<=128 字，仅 `[a-z0-9-]` |
+  | title            | string   | 是 | <=255 字 |
+  | shortDescription | string   | 否 | <=512 字 |
+  | longDescription  | string   | 否 | 无限制 |
+  | problem          | string   | 否 | 无限制 |
+  | solution         | string   | 否 | 无限制 |
+  | challenges       | string   | 否 | 无限制 |
+  | results          | string   | 否 | 无限制 |
+  | technologies     | string[] | 否 | 技术栈数组，默认 [] |
+  | githubUrl        | string   | 否 | <=512 字 |
+  | demoUrl          | string   | 否 | <=512 字 |
+  | featuredImage    | string   | 否 | <=512 字 |
+  | gallery          | string[] | 否 | 图库数组，默认 [] |
+  | publishedAt      | string   | 否 | ISO date `YYYY-MM-DD` |
+  | featured         | bool     | 否 | 默认 false |
+  | isPublic         | bool     | 否 | 默认 true |
+  | sortOrder        | int      | 否 | 默认 0 |
+- **成功响应 data**：新增后的完整 project 对象。
+- **错误码**：`40001` 校验失败（slug/title 缺失或格式不合法）；`40100` / `40300` / `50000`。
+- **关联表**：`portfolio_project`。
+- **备注**：slug 重复返回 `40001`。
+
+#### PUT /api/admin/projects/:id
+
+- **作用**：更新项目。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：path `id`；body 字段同 POST，全部可选（仅更新传入字段）。
+- **成功响应 data**：更新后的完整 project 对象。
+- **错误码**：`40001` / `40100` / `40300` / `40400` / `50000`。
+- **关联表**：`portfolio_project`。
+- **备注**：slug 更新时若与其他记录冲突返回 `40001`。
+
+#### DELETE /api/admin/projects/:id
+
+- **作用**：删除项目（软删）。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：path `id`。
+- **成功响应 data**：`{ "id": 1 }`。
+- **错误码**：`40100` / `40300` / `40400` / `50000`。
+- **关联表**：`portfolio_project`。
+- **备注**：GORM 软删，写入 `deleted_at`。
 
 ## 变更记录
 

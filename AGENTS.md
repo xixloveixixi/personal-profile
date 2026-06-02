@@ -7,14 +7,10 @@
 - `docs/dev-harness/progress-log.md`
 - `docs/dev-harness/pitfalls.md`
 
-涉及业务后端（Stage 2 起）时，还必须先读取：
+涉及业务后端或前端变更时，还必须先读取：
 
 - `docs/dev-harness/api-contract.md`
 - `docs/dev-harness/schema.md`
-
-涉及前端 Track（Next.js 公开页 / 后台）时，还必须先读取：
-
-- `docs/dev-harness/stage-plan-frontend.md`
 
 ## 自检命令
 

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import { ExternalLink, Github, ChevronLeft, ChevronRight } from 'lucide-react'
-import { type PublicProject } from '@/lib/api/public'
+import type { PublicProject } from '@/lib/api/public'
 
 interface PortfolioClientProps {
   initialProjects: PublicProject[]
@@ -173,7 +173,7 @@ export function PortfolioClient({ initialProjects }: PortfolioClientProps) {
     }
     if (a.featured && !b.featured) return -1
     if (!a.featured && b.featured) return 1
-    return new Date(b.publishedAt ?? '').getTime() - new Date(a.publishedAt ?? '').getTime()
+    return 0
   })
 
   return (

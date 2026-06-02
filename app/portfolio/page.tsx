@@ -1,5 +1,5 @@
 import { Metadata } from 'next'
-import { getPublicProjects, type PublicProject } from '@/lib/api/public'
+import { getPublicProjects } from '@/lib/api/public'
 import { PortfolioClient } from './PortfolioClient'
 
 export const metadata: Metadata = {

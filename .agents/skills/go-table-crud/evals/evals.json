@@ -1,0 +1,20 @@
+{
+  "skill_name": "go-table-crud",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "现在要为 personal-profile 项目新增 work_experience 表的后端代码。表结构如下（视为已在 schema.md 冻结）：work_experience (id BIGINT PK, owner_id BIGINT NOT NULL, company VARCHAR(128), title VARCHAR(128), start_date DATE, end_date DATE NULL, is_current TINYINT DEFAULT 0, description TEXT, sort_order INT DEFAULT 0, is_public TINYINT DEFAULT 1, created_at, updated_at, deleted_at)。接口契约如下（视为已在 api-contract.md 冻结）：GET /api/public/work-experiences（公开，返回 is_public=1 列表），GET/POST /api/admin/work-experiences（需 token），PUT/DELETE /api/admin/work-experiences/:id（需 token）。请按照项目现有的分层规范实现完整 CRUD。",
+      "expected_output": "按顺序产出：1) internal/model/work_experience.go，2) internal/repository/work_experience.go，3) internal/handler/work_experience.go，4) 更新 router.go 注册路由，5) 更新 seed SQL，6) go build ./... 通过，7) curl 验收结果列表"
+    },
+    {
+      "id": 2,
+      "prompt": "sys_user 表需要落地 Go 后端接口。表结构（视为已冻结）：sys_user (id BIGINT PK, username VARCHAR(64) UNIQUE, password_hash VARCHAR(256), role VARCHAR(32) DEFAULT 'owner', created_at, updated_at, deleted_at)。接口（视为已冻结）：POST /api/admin/users（创建用户，需 token），GET /api/admin/users（获取用户列表，需 token），DELETE /api/admin/users/:id（删除用户，需 token）。这张表没有 is_public 字段，也没有公开读接口。请按项目规范实现。",
+      "expected_output": "正确识别该表没有 is_public 字段和公开 GET 接口，repository 中不生成 FindPublicByOwnerID，handler 中不生成 GetPublic 方法，只有 admin 路由"
+    },
+    {
+      "id": 3,
+      "prompt": "我想为 personal-profile 后端新增 project_tag 表，这是一张 K-V 风格的配置表（类似 site_config）。表结构（视为已冻结）：project_tag (id BIGINT PK, tag_key VARCHAR(64) UNIQUE NOT NULL, tag_value VARCHAR(512) NOT NULL, created_at, updated_at)。接口（视为已冻结）：GET /api/public/project-tags（公开，无需 token），PUT /api/admin/project-tags/:key（upsert，需 token）。没有 owner_id，没有 is_public，没有 DELETE 接口。请实现。",
+      "expected_output": "正确识别为 K-V 类型表，repository 用 Upsert 而非 Create+Update，FindAll 不加 owner_id 过滤，handler 无 DELETE，路由中只有公开 GET 和 admin PUT/:key"
+    }
+  ]
+}
