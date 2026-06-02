@@ -1,5 +1,5 @@
 import { Metadata } from 'next'
-import { getAllProjects } from '@/lib/content/projects'
+import { getPublicProjects, type PublicProject } from '@/lib/api/public'
 import { PortfolioClient } from './PortfolioClient'
 
 export const metadata: Metadata = {
@@ -12,8 +12,8 @@ export const metadata: Metadata = {
   },
 }
 
-export default function PortfolioPage() {
-  const projects = getAllProjects()
+export default async function PortfolioPage() {
+  const projects = await getPublicProjects()
 
   return (
     <div className="min-h-full px-4 py-12 md:py-16 relative">

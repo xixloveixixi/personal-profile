@@ -1,7 +1,7 @@
-import { PortfolioProject } from '@/lib/content/projects'
+import type { PublicProjectDetail } from '@/lib/api/public'
 
 interface StructuredDataProps {
-  project: PortfolioProject
+  project: PublicProjectDetail
   siteUrl: string
 }
 
@@ -33,4 +33,3 @@ export function StructuredData({ project, siteUrl }: StructuredDataProps) {
     />
   )
 }
-

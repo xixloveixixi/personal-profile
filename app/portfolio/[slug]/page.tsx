@@ -1,10 +1,19 @@
 import { notFound } from 'next/navigation'
-import { getProjectBySlug, getAllProjects } from '@/lib/content/projects'
+import { getPublicProjectBySlug, getPublicProjects, type PublicProjectDetail } from '@/lib/api/public'
 import { ProjectDetail } from '@/components/portfolio/ProjectDetail'
 import { generateMetadata } from './metadata'
 import { StructuredData } from './structured-data'
 
 export { generateMetadata }
+
+export const dynamic = 'force-dynamic'
+
+export async function generateStaticParams() {
+  const projects = await getPublicProjects()
+  return projects.map((project) => ({
+    slug: project.slug,
+  }))
+}
 
 interface ProjectPageProps {
   params: {
@@ -12,15 +21,13 @@ interface ProjectPageProps {
   }
 }
 
-export async function generateStaticParams() {
-  const projects = getAllProjects()
-  return projects.map((project) => ({
-    slug: project.slug,
-  }))
-}
-
-export default function ProjectPage({ params }: ProjectPageProps) {
-  const project = getProjectBySlug(params.slug)
+export default async function ProjectPage({ params }: ProjectPageProps) {
+  let project: PublicProjectDetail | null = null
+  try {
+    project = await getPublicProjectBySlug(params.slug)
+  } catch {
+    // API returns error for non-existent slug
+  }
 
   if (!project) {
     notFound()
@@ -35,4 +42,3 @@ export default function ProjectPage({ params }: ProjectPageProps) {
     </div>
   )
 }
-

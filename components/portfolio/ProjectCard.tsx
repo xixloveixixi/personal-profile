@@ -4,10 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { ExternalLink, Github } from 'lucide-react'
 import { motion } from 'framer-motion'
-import type { PortfolioProject } from '@/lib/content/projects'
+import type { PublicProject } from '@/lib/api/public'
 
 interface ProjectCardProps {
-  project: PortfolioProject
+  project: PublicProject
 }
 
 export function ProjectCard({ project }: ProjectCardProps) {
@@ -89,4 +89,3 @@ export function ProjectCard({ project }: ProjectCardProps) {
     </motion.div>
   )
 }
-

@@ -1,10 +1,10 @@
 import Image from 'next/image'
 import { Badge } from '@/components/ui/Badge'
 import { ExternalLink, Github } from 'lucide-react'
-import type { PortfolioProject } from '@/lib/content/projects'
+import type { PublicProjectDetail } from '@/lib/api/public'
 
 interface ProjectDetailProps {
-  project: PortfolioProject
+  project: PublicProjectDetail
 }
 
 export function ProjectDetail({ project }: ProjectDetailProps) {

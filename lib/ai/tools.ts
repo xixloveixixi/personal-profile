@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { hybridSearch } from './hybrid-search'
-import { getAllProjects } from '@/lib/content/projects'
+import { getPublicProjects } from '@/lib/api/public'
 import { getPublicSkills } from '@/lib/api/public'
 import { agentErrorHandler } from './error-handler'
 import { formatToolResponseWithSource } from './hallucination-prevention'
@@ -111,7 +111,7 @@ export const getProjectDetailTool: Tool = {
   }),
   execute: async ({ projectName }) => {
     try {
-      const projects = getAllProjects()
+      const projects = await getPublicProjects()
       const project = projects.find(
         (p) =>
           p.title.toLowerCase().includes(projectName.toLowerCase()) ||
@@ -124,11 +124,6 @@ export const getProjectDetailTool: Tool = {
 
       const answer = `项目名称: ${project.title}
 简介: ${project.shortDescription}
-${project.longDescription ? `详细介绍: ${project.longDescription}\n` : ''}
-${project.problem ? `解决的问题: ${project.problem}\n` : ''}
-${project.solution ? `解决方案: ${project.solution}\n` : ''}
-${project.challenges ? `技术挑战: ${project.challenges}\n` : ''}
-${project.results ? `项目成果: ${project.results}\n` : ''}
 技术栈: ${project.technologies.join(', ')}
 ${project.githubUrl ? `GitHub: ${project.githubUrl}\n` : ''}
 ${project.demoUrl ? `Demo: ${project.demoUrl}\n` : ''}`
@@ -232,4 +227,3 @@ export function parseToolParams(rawParams: string): Record<string, any> {
     throw new Error(`参数解析失败: ${rawParams}`)
   }
 }
-

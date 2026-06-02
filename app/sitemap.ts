@@ -1,6 +1,5 @@
 import { MetadataRoute } from 'next'
 import { getAllArticles } from '@/lib/content/blog'
-import { getAllProjects } from '@/lib/content/projects'
 
 function safeDate(value?: string): Date {
   if (!value) return new Date()
@@ -18,12 +17,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }))
 
-  const projects = getAllProjects().map((project) => ({
-    url: `${baseUrl}/portfolio/${project.slug}`,
-    lastModified: safeDate(project.publishedAt),
-    changeFrequency: 'monthly' as const,
-    priority: 0.7,
-  }))
+  // Note: projects are fetched dynamically via API, not included in static sitemap
+  // The portfolio/[slug] pages use generateStaticParams with dynamic fetching
 
   return [
     {
@@ -51,7 +46,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.8,
     },
     ...articles,
-    ...projects,
   ]
 }
-

@@ -1,8 +1,8 @@
 import { ProjectCard } from './ProjectCard'
-import type { PortfolioProject } from '@/lib/content/projects'
+import type { PublicProject } from '@/lib/api/public'
 
 interface ProjectGridProps {
-  projects: PortfolioProject[]
+  projects: PublicProject[]
 }
 
 export function ProjectGrid({ projects }: ProjectGridProps) {
