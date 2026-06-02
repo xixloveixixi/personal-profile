@@ -2,6 +2,7 @@
 -- 来源 content/projects/*.json（cq/cream-design/farmland-dashboard/vue3-big-event/zhangyuan）
 -- 幂等：DELETE + INSERT
 
+SET NAMES utf8mb4;
 DELETE FROM portfolio_project WHERE owner_id = 1;
 
 INSERT INTO portfolio_project (owner_id, slug, title, short_description, long_description, problem, solution, challenges, results, github_url, demo_url, featured_image, technologies, gallery, featured, is_public, sort_order, published_at, created_at, updated_at) VALUES
