@@ -659,3 +659,89 @@
 
 ### 明日第一步
 - 确认下一阶段范围（FB-4 私有学习工作台 or portfolio_project 表？），用户发起时再推进。
+
+## 2026-06-03（FB-4 Gate E/F 收尾）
+
+### 今日目标
+- 完成 FB-4 浏览器验收，修复 icon 问题，过 Gate F。
+
+### 今日完成
+- 用户浏览器验收 portfolio 列表页、详情页、后台 CRUD 全部通过。
+- 定位首页联系方式 icon 不显示问题：iconMap 只有大写键（`GitHub`），数据库存的是小写（`github`）。
+- 修复 `components/icons/SocialIcons.tsx`：iconMap 扩展为同时支持大小写键和中文键。
+- `npm run build` → exit code 0。
+- FB-4 Gate E 8/8 全通。
+- FB-4 Gate F 勾选完毕。
+
+### 当前阻塞
+- 无。FB-4 已全部完成。
+
+### 关键决策
+- icon 映射同时支持大小写（`GitHub`/`github`）和中文（`微信`/`掘金`），避免数据库存储风格差异导致 icon 不显示。
+
+### Gate E 状态
+- [x] portfolio_project 表已建 + 种子数据灌入
+- [x] 公开 API：`GET /api/public/projects` 列表 + `GET /api/public/projects/:slug` 详情
+- [x] Admin API：6 接口 curl 全通
+- [x] 前端 portfolio 列表页 + 详情页表现与迁移前一致
+- [x] 后台 `/admin/projects` CRUD 操作正常
+- [x] `content/projects/*.json` 与 `lib/content/projects.ts` 已删除
+- [x] `npm run build` 通过
+- [x] `go build ./...` 通过
+
+### Gate F 状态
+- [x] `progress-log.md` 已更新
+- [x] 踩坑写入 `pitfalls.md`（iconMap 大小写问题）
+- [x] 下一阶段范围已明确
+
+### 明日第一步
+- 进入下一阶段开发。
+
+## 2026-06-04（FB-5 Day 1-4：学习工作台全量实现）
+
+### 今日目标
+- 使用 subagents 并行完成 FB-5 后端 + 前端全量实现，curl 验收通过。
+
+### 今日完成
+- 新增 `backend/migrations/0003_learning.sql`：建 learning_profile + learning_goal 两张表。
+- 新增 `backend/migrations/seed_003_learning.sql`：种子数据（1 条画像 + 3 条目标）。
+- 新增 `internal/model/learning_profile.go` + `internal/model/learning_goal.go`：GORM model。
+- 新增 `internal/repository/learning_profile.go`（FindByOwnerID / Upsert）+ `internal/repository/learning_goal.go`（FindAll / Create / FindByID / Update / Delete）。
+- 新增 `internal/handler/learning_profile.go`（Get / Upsert）+ `internal/handler/learning_goal.go`（Get / Create / Update / Delete）。
+- 修改 `internal/router/router.go`：新增 `/api/private` 路由组，挂 Auth + RequireOwnerRole 中间件。
+- 新增 `lib/api/private.ts`：学习工作台 API client，复用 adminFetch token 注入。
+- 新增 `app/admin/learning/page.tsx`：学习工作台首页（画像概览 + 目标表格）。
+- 新增 `app/admin/learning/profile/page.tsx`：学习画像 Antd Form 编辑。
+- 新增 `app/admin/learning/goals/page.tsx`：学习目标 Antd Table + Modal CRUD。
+- 修改 `app/admin/layout.tsx`：左侧菜单增加"学习工作台"入口。
+- `go build ./...` → EXIT 0。
+- `npm run build` → EXIT 0。
+- MySQL migration + seed 执行成功。
+- curl 8 项验收全通过：GET profile ✅ / PUT profile upsert ✅ / GET goals ✅ / POST goal ✅ / PUT goal ✅ / DELETE goal ✅ / 无 token 401 ✅ / upsert 后 GET 确认 ✅。
+
+### 当前阻塞
+- 前端 3 个页面待浏览器实测确认交互正常。
+
+### 关键决策
+- 私有学习工作台页面放在 `/admin/learning/*` 下，复用已有 admin layout 和 middleware 鉴权，不新建独立的 `/dashboard` 路由。
+- `lib/api/private.ts` 直接复用 `adminFetch`（同一套 token 注入），不另建 `privateFetch`。
+- PUT learning profile 采用全量替换语义（与 public_profile 一致），未传字段置 null。
+
+### Gate E 状态
+- [x] `learning_profile` 表已建，种子数据可灌入
+- [x] `learning_goal` 表已建，种子数据可灌入
+- [x] 私有 API：`GET/PUT /api/private/learning/profile` curl 全通
+- [x] 私有 API：`GET/POST/PUT/DELETE /api/private/learning/goals` curl 全通
+- [x] 前端 `/admin/learning` 页面显示画像和目标列表（用户浏览器验收通过）
+- [x] 前端 `/admin/learning/profile` 页面可编辑学习画像（用户浏览器验收通过）
+- [x] 前端 `/admin/learning/goals` 页面可增删改查学习目标（用户浏览器验收通过）
+- [x] `npm run build` 通过
+- [x] `go build ./...` 通过
+
+### Gate F 状态
+- [x] `progress-log.md` 已更新
+- [x] 踩坑写入 `pitfalls.md`（本阶段无新踩坑）
+- [x] 下一阶段范围已明确
+
+### 明日第一步
+- FB-5 全部完成。用户发起下一阶段时再推进。

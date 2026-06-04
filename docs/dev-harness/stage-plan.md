@@ -457,7 +457,7 @@
 
 ---
 
-## 阶段 6：项目展示后端化 + 前端切 API + 后台 CRUD (FB-4)
+## 阶段 6：项目展示后端化 + 前端切 API + 后台 CRUD (FB-4)（已完成）
 
 ### 阶段目标
 
@@ -515,17 +515,17 @@
 - [x] `portfolio_project` 表已建，种子数据（5 个项目）可灌入。
 - [x] 公开 API：`GET /api/public/projects` 返回列表；`GET /api/public/projects/:slug` 返回详情。
 - [x] Admin API：6 个接口 curl 全通（带 token + role=owner）。
-- [ ] 前端 portfolio 列表页 + 详情页表现与迁移前一致（需浏览器实测）。
-- [ ] 后台 `/admin/projects` CRUD 操作正常（需浏览器实测）。
+- [x] 前端 portfolio 列表页 + 详情页表现与迁移前一致（用户浏览器验收通过）。
+- [x] 后台 `/admin/projects` CRUD 操作正常（用户浏览器验收通过）。
 - [x] `content/projects/*.json` 与 `lib/content/projects.ts` 已删除。
 - [x] `npm run build` 通过。
 - [x] `go build ./...` 通过。
 
 #### Gate F：沉淀闸门
 
-- [ ] `progress-log.md` 已更新。
-- [ ] 踩坑写入 `pitfalls.md`。
-- [ ] 下一阶段范围已明确。
+- [x] `progress-log.md` 已更新。
+- [x] 踩坑写入 `pitfalls.md`。
+- [x] 下一阶段范围已明确。
 
 ### 节奏建议
 
@@ -548,3 +548,102 @@
 - [x] FB-3 Gate E/F 全部通过。
 - [x] `schema.md` 中 `portfolio_project` DDL 已冻结。
 - [x] `api-contract.md` 中 6 个接口已冻结。
+
+---
+
+## 当前阶段：阶段 7 学习工作台最小集 (FB-5)
+
+### 阶段目标
+
+实现学习工作台的最小闭环：学习画像（单条 upsert）+ 学习目标（多条 CRUD），前端私有页面展示和管理。
+
+### 本阶段做什么
+
+- 新增 `learning_profile` 表（DDL + migration + 种子 SQL）—— 学习画像，单条 upsert。
+- 新增 `learning_goal` 表（DDL + migration + 种子 SQL）—— 学习目标，多条 CRUD。
+- 实现私有读写接口（owner only）：
+  - `GET /api/private/learning/profile` —— 获取学习画像。
+  - `PUT /api/private/learning/profile` —— upsert 学习画像。
+  - `GET /api/private/learning/goals` —— 获取学习目标列表。
+  - `POST /api/private/learning/goals` —— 新增学习目标。
+  - `PUT /api/private/learning/goals/:id` —— 更新学习目标。
+  - `DELETE /api/private/learning/goals/:id` —— 删除学习目标。
+- 前端新增 `/dashboard` 私有学习工作台首页（显示画像和目标列表）。
+- 前端新增 `/profile` 学习画像管理页面。
+- 前端新增 `/goals` 学习目标管理页面。
+
+### 本阶段不做什么
+
+- 不做 `learning_plan` / `learning_task` / `learning_progress` / `weekly_review` 表。
+- 不做 AI 生成计划功能。
+- 不做 `agent_conversation` / `agent_message` / `agent_memory` 表。
+- 不做公开读接口（仅 owner 可见）。
+- 不做复杂的目标进度追踪。
+
+### 闸门检查
+
+#### Gate A：需求闸门
+
+- [x] 是否确认本阶段只做 `learning_profile` + `learning_goal` 两张表的后端 + 前端私有页面？
+- [x] 是否确认不做 AI 生成计划、不做其他学习相关表？
+- [x] 验收标准：curl 全通 + 前端三个私有页面可用 + `npm run build` 通过？
+
+#### Gate B：设计闸门
+
+- [x] `schema.md` 中 `learning_profile` DDL 是否已冻结？
+- [x] `schema.md` 中 `learning_goal` DDL 是否已冻结？
+- [x] `api-contract.md` 中 6 个私有接口是否已冻结？
+- [x] 前端 API client 新增函数位置是否确认（`lib/api/private.ts`）？
+- [x] 前端页面路由是否确认（`/dashboard`、`/profile`、`/goals`）？
+
+#### Gate C：学习闸门
+
+- [ ] 是否了解 upsert 模式在 GORM 中的实现方式（`ON DUPLICATE KEY UPDATE` 或 `Clauses`）？
+- [ ] 是否了解 Next.js App Router 私有页面的鉴权模式（middleware + session）？
+
+#### Gate D：编码闸门
+
+- [ ] `go build ./...` 当前通过。
+- [ ] `npm run build` 当前通过。
+- [ ] 新增文件位置已确认（model/repo/handler）。
+- [ ] 私有页面鉴权方案已确认。
+
+#### Gate E：验证闸门
+
+- [x] `learning_profile` 表已建，种子数据可灌入。
+- [x] `learning_goal` 表已建，种子数据可灌入。
+- [x] 私有 API：`GET/PUT /api/private/learning/profile` curl 全通（带 token）。
+- [x] 私有 API：`GET/POST/PUT/DELETE /api/private/learning/goals` curl 全通（带 token）。
+- [x] 前端 `/admin/learning` 页面显示画像和目标列表。
+- [x] 前端 `/admin/learning/profile` 页面可编辑学习画像。
+- [x] 前端 `/admin/learning/goals` 页面可增删改查学习目标。
+- [x] `npm run build` 通过。
+- [x] `go build ./...` 通过。
+
+#### Gate F：沉淀闸门
+
+- [x] `progress-log.md` 已更新。
+- [x] 踩坑写入 `pitfalls.md`（本阶段无新踩坑）。
+- [x] 下一阶段范围已明确。
+
+### 节奏建议
+
+| 天数 | 目标 | 产出 |
+| --- | --- | --- |
+| Day 1 | 确认 Gate A/B，冻结契约，写 migration + 种子 SQL | learning_profile + learning_goal 表可用 |
+| Day 2 | 实现 model + repository + 6 个 handler + 路由注册 | 后端 curl 全通 |
+| Day 3 | 前端 /dashboard 首页 + /profile 画像页 | 画像可查看和编辑 |
+| Day 4 | 前端 /goals 目标管理页面 | 目标可增删改查 |
+| Day 5 | build 验收 + Gate F | 阶段完成 |
+
+### 降级策略
+
+- GORM upsert 复杂：改用先查后插/更新的两步操作。
+- 私有页面鉴权卡住：先硬编码 owner 检查，后续再抽象中间件。
+- 前端页面耗时：先只实现 /dashboard 展示，/profile 和 /goals 编辑后补。
+
+### 进入前置条件
+
+- [x] FB-4 Gate E/F 全部通过。
+- [x] `schema.md` 中 `learning_profile` + `learning_goal` DDL 已冻结。
+- [x] `api-contract.md` 中私有接口已冻结。

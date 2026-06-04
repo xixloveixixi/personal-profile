@@ -346,6 +346,145 @@
 - `lib/stores/auth.ts`：登录响应中 `user` 字段新增 `id`，store 可选存储 `userId`。
 - `middleware.ts`：无需改动（仍判断 cookie 是否存在）。
 
+## 待冻结接口（Stage 7 / FB-5：学习工作台）
+
+> 状态：✅ 已冻结于 2026-06-03。
+
+### 私有接口（`/api/private/*`）
+
+> 共同要求：Bearer Token + role=owner，否则返回 `40100` / `40300`。
+> 与 `/api/admin/*` 区别：admin 是后台管理，private 是私有学习工作台。
+
+#### GET /api/private/learning/profile
+
+- **作用**：获取学习画像（单条）。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：无。
+- **成功响应 data**：
+  ```json
+  {
+    "id": 1,
+    "targetRole": "前端架构师",
+    "backgroundSummary": "...",
+    "skillSummary": "...",
+    "weaknessSummary": "...",
+    "learningPreference": "...",
+    "resumeSnapshot": "..."
+  }
+  ```
+- **错误码**：`40100` 未登录；`40300` 权限不足；`40400` 未初始化画像；`50000` DB 异常。
+- **关联表**：`learning_profile`。
+
+#### PUT /api/private/learning/profile
+
+- **作用**：更新（upsert）学习画像。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：JSON Body
+  | 字段 | 类型 | 必填 | 说明 |
+  |------|------|------|------|
+  | targetRole        | string | 否 | 目标角色 |
+  | backgroundSummary | string | 否 | 背景摘要 |
+  | skillSummary      | string | 否 | 技能摘要 |
+  | weaknessSummary   | string | 否 | 弱点摘要 |
+  | learningPreference| string | 否 | 学习偏好 |
+  | resumeSnapshot    | string | 否 | 简历快照 |
+- **成功响应 data**：更新后完整 profile。
+- **错误码**：`40001` 校验失败；`40100` / `40300` / `50000`。
+- **关联表**：`learning_profile`。
+
+#### GET /api/private/learning/goals
+
+- **作用**：获取学习目标列表。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：无。
+- **成功响应 data**：
+  ```json
+  [
+    {
+      "id": 1,
+      "title": "掌握 React Server Components",
+      "description": "...",
+      "goalType": "skill",
+      "priority": 1,
+      "deadline": "2026-07-01",
+      "status": "in_progress",
+      "progressPercent": 30
+    }
+  ]
+  ```
+- **错误码**：`40100` / `40300` / `50000`。
+- **关联表**：`learning_goal`。
+- **备注**：按 `priority ASC, id ASC` 全量返回。
+
+#### POST /api/private/learning/goals
+
+- **作用**：新增学习目标。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：JSON Body
+  | 字段 | 类型 | 必填 | 说明 |
+  |------|------|------|------|
+  | title           | string | 是 | 目标标题 |
+  | description     | string | 否 | 目标描述 |
+  | goalType        | string | 否 | 目标类型 |
+  | priority        | int    | 否 | 优先级，默认 0 |
+  | deadline        | string | 否 | 截止日期 `YYYY-MM-DD` |
+  | status          | string | 否 | 状态，默认 `pending` |
+  | progressPercent | int    | 否 | 进度百分比，默认 0 |
+- **成功响应 data**：新增后完整 goal。
+- **错误码**：`40001` / `40100` / `40300` / `50000`。
+- **关联表**：`learning_goal`。
+
+#### PUT /api/private/learning/goals/:id
+
+- **作用**：更新学习目标。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：path `id`；body 字段同 POST，全部可选。
+- **成功响应 data**：更新后完整 goal。
+- **错误码**：`40001` / `40100` / `40300` / `40400` / `50000`。
+- **关联表**：`learning_goal`。
+
+#### DELETE /api/private/learning/goals/:id
+
+- **作用**：删除学习目标（软删）。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：path `id`。
+- **成功响应 data**：`{ "id": 1 }`。
+- **错误码**：`40100` / `40300` / `40400` / `50000`。
+- **关联表**：`learning_goal`。
+- **备注**：GORM 软删，写入 `deleted_at`。
+
+## 已冻结接口（Pipeline 验证 / REQ-20260603-01）
+
+> 状态：✅ 已冻结于 2026-06-03。
+
+### GET /api/health（改造）
+
+- **作用**：健康检查 + 记录调用日志。
+- **鉴权**：公开。
+- **请求参数**：无。
+- **成功响应 data**：
+  ```json
+  { "status": "ok" }
+  ```
+- **副作用**：写入一条 `health_check_log` 记录。
+- **关联表**：`health_check_log`。
+
+### GET /api/admin/health-stats
+
+- **作用**：查询最近 24 小时健康检查调用次数。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：无。
+- **成功响应 data**：
+  ```json
+  {
+    "totalCount": 1440,
+    "startTime": "2026-06-02T11:15:00Z",
+    "endTime": "2026-06-03T11:15:00Z"
+  }
+  ```
+- **错误码**：`40100` 未登录；`40300` 权限不足。
+- **关联表**：`health_check_log`。
+
 ## 本阶段不做
 
 - 不做分页、排序参数、模糊搜索（`GET` 全量返回即可）。

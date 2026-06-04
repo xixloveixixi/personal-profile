@@ -3,7 +3,8 @@
 - 流程类：范围控制、学习发散、文档同步、阶段切换标题、Gate C 勾选权、多 Track 当前阶段游标
 - Go 工程：go.mod 位置、GOPROXY、response 包
 - 工具链：进入新栈前置检查、MySQL formula 版本、前后端开发端口 CORS
-- 前后端联调：API 响应字段命名风格变更
+- 前后端联调：API 响应字段命名风格变更、iconMap 大小写不匹配
+- Antd：Modal destroyOnClose 导致 setFieldsValue 失效
 
 ## 使用原则
 
@@ -394,3 +395,35 @@ const handleAfterOpenChange = useCallback((open: boolean) => {
 ### 下次如何避免
 
 任何使用了 `destroyOnClose` 的 Modal，且有"点击行数据后弹出编辑"逻辑时，必须用 `afterOpenChange` 而非在 `setModalOpen(true)` 之前调用 `setFieldsValue`。如果 Modal 只用于新建（无需预填数据），则不受此问题影响。
+
+## iconMap 大小写不匹配导致 icon 不显示
+
+### 场景
+
+FB-4 验收首页时，联系方式 icon 全部显示为默认的 LinkOutlined，而非预期的 GitHub/微信等平台图标。
+
+### 原因
+
+`components/icons/SocialIcons.tsx` 中的 iconMap 只定义了大写键（`GitHub`、`WeChat`），而数据库中 `public_contact.icon` 字段存储的是小写（`github`、`wechat`）。JavaScript 对象键名区分大小写，导致查找失败。
+
+### 解决方案
+
+iconMap 同时定义大写、小写和中文键：
+
+```tsx
+export const iconMap = {
+  // 大写版本
+  GitHub: GithubIcon,
+  WeChat: WeChatIcon,
+  // 小写版本（兼容数据库存储）
+  github: GithubIcon,
+  wechat: WeChatIcon,
+  // 中文映射
+  微信: WeChatIcon,
+  掘金: JuejinIcon,
+}
+```
+
+### 下次如何避免
+
+定义 icon 映射表时，同时覆盖常见的大小写和中文变体。数据库存储时统一使用小写（或约定一种风格），并在 api-contract.md 中明确 icon 字段的推荐值列表。
