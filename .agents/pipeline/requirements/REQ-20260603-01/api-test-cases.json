@@ -1,0 +1,101 @@
+{
+  "reqId": "REQ-20260603-01",
+  "baseUrl": "http://localhost:8080",
+  "testCases": [
+    {
+      "id": "TC-API-001",
+      "name": "健康检查 - 正常返回",
+      "method": "GET",
+      "path": "/api/health",
+      "headers": {},
+      "body": null,
+      "expectedStatus": 200,
+      "expectedBody": {
+        "code": 0,
+        "data": {
+          "status": "ok"
+        }
+      }
+    },
+    {
+      "id": "TC-API-002",
+      "name": "健康统计 - 带 token 正常返回",
+      "method": "GET",
+      "path": "/api/admin/health-stats",
+      "headers": {
+        "Authorization": "Bearer {{token}}"
+      },
+      "body": null,
+      "expectedStatus": 200,
+      "expectedBody": {
+        "code": 0,
+        "data": {
+          "totalCount": "number",
+          "startTime": "string",
+          "endTime": "string"
+        }
+      }
+    },
+    {
+      "id": "TC-API-003",
+      "name": "健康统计 - 无 token 返回 40100",
+      "method": "GET",
+      "path": "/api/admin/health-stats",
+      "headers": {},
+      "body": null,
+      "expectedStatus": 200,
+      "expectedBody": {
+        "code": 40100
+      }
+    },
+    {
+      "id": "TC-API-004",
+      "name": "健康统计 - 无效 token 返回 40100",
+      "method": "GET",
+      "path": "/api/admin/health-stats",
+      "headers": {
+        "Authorization": "Bearer invalid_token_xxx"
+      },
+      "body": null,
+      "expectedStatus": 200,
+      "expectedBody": {
+        "code": 40100
+      }
+    },
+    {
+      "id": "TC-API-005",
+      "name": "健康检查记录写入验证 - 调用前后统计增加",
+      "method": "SEQUENCE",
+      "steps": [
+        {
+          "name": "获取初始统计",
+          "method": "GET",
+          "path": "/api/admin/health-stats",
+          "headers": {
+            "Authorization": "Bearer {{token}}"
+          },
+          "saveAs": "initialCount",
+          "extract": "data.totalCount"
+        },
+        {
+          "name": "调用健康检查",
+          "method": "GET",
+          "path": "/api/health",
+          "headers": {}
+        },
+        {
+          "name": "获取最新统计",
+          "method": "GET",
+          "path": "/api/admin/health-stats",
+          "headers": {
+            "Authorization": "Bearer {{token}}"
+          },
+          "expectedBody": {
+            "code": 0
+          },
+          "assertion": "data.totalCount > {{initialCount}}"
+        }
+      ]
+    }
+  ]
+}

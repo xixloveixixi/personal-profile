@@ -1,0 +1,6 @@
+{
+  "reqId": "REQ-20260603-01",
+  "baseUrl": "http://localhost:3000",
+  "note": "本需求不做前端 UI，E2E 测试用例为空",
+  "testCases": []
+}
