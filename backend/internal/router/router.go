@@ -13,12 +13,16 @@ import (
 func Setup(r *gin.Engine, db *gorm.DB) {
 	api := r.Group("/api")
 
-	// 公开接口
-	api.GET("/health", handler.Health)
-
+	// 公开接口（无 DB 时使用简化版健康检查）
 	if db == nil {
+		api.GET("/health", handler.Health)
 		return
 	}
+
+	// 健康检查（带日志记录）
+	healthLogRepo := repository.NewHealthCheckLogRepo(db)
+	healthHandler := handler.NewHealthHandler(healthLogRepo)
+	api.GET("/health", healthHandler.Check)
 
 	// Stage 3 认证（DB 校验）
 	userRepo := repository.NewSysUserRepo(db)
@@ -78,4 +82,23 @@ func Setup(r *gin.Engine, db *gorm.DB) {
 	admin.POST("/projects", projectHandler.CreateProject)
 	admin.PUT("/projects/:id", projectHandler.UpdateProject)
 	admin.DELETE("/projects/:id", projectHandler.DeleteProject)
+
+	// 健康检查统计
+	healthStatsHandler := handler.NewHealthStatsHandler(healthLogRepo)
+	admin.GET("/health-stats", healthStatsHandler.GetStats)
+
+	// Stage 7 私有学习工作台
+	learningProfileRepo := repository.NewLearningProfileRepo(db)
+	learningProfileHandler := handler.NewLearningProfileHandler(learningProfileRepo)
+	learningGoalRepo := repository.NewLearningGoalRepo(db)
+	learningGoalHandler := handler.NewLearningGoalHandler(learningGoalRepo)
+
+	privateGroup := api.Group("/private")
+	privateGroup.Use(middleware.Auth(), middleware.RequireOwnerRole())
+	privateGroup.GET("/learning/profile", learningProfileHandler.GetLearningProfile)
+	privateGroup.PUT("/learning/profile", learningProfileHandler.UpsertLearningProfile)
+	privateGroup.GET("/learning/goals", learningGoalHandler.GetLearningGoals)
+	privateGroup.POST("/learning/goals", learningGoalHandler.CreateLearningGoal)
+	privateGroup.PUT("/learning/goals/:id", learningGoalHandler.UpdateLearningGoal)
+	privateGroup.DELETE("/learning/goals/:id", learningGoalHandler.DeleteLearningGoal)
 }
