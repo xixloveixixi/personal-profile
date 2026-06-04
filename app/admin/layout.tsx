@@ -21,6 +21,7 @@ const menuItems = [
   { key: '/admin/skills', label: <Link href="/admin/skills">技能列表</Link> },
   { key: '/admin/projects', label: <Link href="/admin/projects">项目管理</Link> },
   { key: '/admin/site-config', label: <Link href="/admin/site-config">站点配置</Link> },
+  { key: '/admin/learning', label: <Link href="/admin/learning">学习工作台</Link> },
 ]
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
