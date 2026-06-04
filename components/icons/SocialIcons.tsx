@@ -26,10 +26,17 @@ export const JuejinIcon = ({ className }: { className?: string }) => (
 
 // 图标映射表
 export const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  // 大写版本
   GitHub: GithubIcon,
   WeChat: WeChatIcon,
-  微信: WeChatIcon, // 添加中文映射
   CSDN: CSDNIcon,
+  // 小写版本（兼容数据库存储）
+  github: GithubIcon,
+  wechat: WeChatIcon,
+  csdn: CSDNIcon,
+  juejin: JuejinIcon,
+  // 中文映射
+  微信: WeChatIcon,
   掘金: JuejinIcon,
 }
 
