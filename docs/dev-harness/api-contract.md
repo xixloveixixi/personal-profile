@@ -485,11 +485,350 @@
 - **错误码**：`40100` 未登录；`40300` 权限不足。
 - **关联表**：`health_check_log`。
 
-## 本阶段不做
+## 待冻结接口（Stage 8 / FB-6：学习计划功能）
 
-- 不做分页、排序参数、模糊搜索（`GET` 全量返回即可）。
-- 不做资源上传 `POST /api/admin/assets/upload`（SDD 9.6，留后续阶段）。
-- 不做用户注册接口 / 修改密码接口（通过种子 SQL 或后续 admin 接口管理）。
+> 状态：✅ 已冻结于 2026-06-04。
+> AI 调用方式：后端 Go 调用 DeepSeek API（OpenAI 兼容），SDK 使用 `github.com/sashabaranov/go-openai`。
+
+### 私有接口（`/api/private/*`）
+
+> 共同要求：Bearer Token + role=owner，否则返回 `40100` / `40300`。
+
+#### GET /api/private/learning/plans
+
+- **作用**：获取学习计划列表。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：无。
+- **成功响应 data**：
+  ```json
+  [
+    {
+      "id": 1,
+      "goalId": 1,
+      "title": "React Server Components 学习计划",
+      "description": "...",
+      "source": "ai_generated",
+      "status": "active",
+      "startDate": "2026-06-01",
+      "endDate": "2026-06-30",
+      "totalTasks": 10,
+      "completedTasks": 3
+    }
+  ]
+  ```
+- **错误码**：`40100` / `40300` / `50000`。
+- **关联表**：`learning_plan`。
+- **备注**：按 `created_at DESC` 全量返回。
+
+#### POST /api/private/learning/plans
+
+- **作用**：新增学习计划。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：JSON Body
+  | 字段 | 类型 | 必填 | 说明 |
+  |------|------|------|------|
+  | goalId      | int    | 否 | 关联目标 ID |
+  | title       | string | 是 | 计划标题 |
+  | description | string | 否 | 计划描述 |
+  | source      | string | 否 | 来源，默认 `manual` |
+  | status      | string | 否 | 状态，默认 `draft` |
+  | startDate   | string | 否 | 开始日期 `YYYY-MM-DD` |
+  | endDate     | string | 否 | 结束日期 `YYYY-MM-DD` |
+- **成功响应 data**：新增后完整 plan。
+- **错误码**：`40001` / `40100` / `40300` / `50000`。
+- **关联表**：`learning_plan`。
+
+#### PUT /api/private/learning/plans/:id
+
+- **作用**：更新学习计划。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：path `id`；body 字段同 POST，全部可选。
+- **成功响应 data**：更新后完整 plan。
+- **错误码**：`40001` / `40100` / `40300` / `40400` / `50000`。
+- **关联表**：`learning_plan`。
+
+#### DELETE /api/private/learning/plans/:id
+
+- **作用**：删除学习计划（软删）。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：path `id`。
+- **成功响应 data**：`{ "id": 1 }`。
+- **错误码**：`40100` / `40300` / `40400` / `50000`。
+- **关联表**：`learning_plan`。
+- **备注**：级联软删关联的 `learning_task`。
+
+#### POST /api/private/learning/plans/generate
+
+- **作用**：AI 生成学习计划草稿。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：JSON Body
+  | 字段 | 类型 | 必填 | 说明 |
+  |------|------|------|------|
+  | goalId      | int    | 是 | 目标 ID，用于获取目标信息 |
+  | preferences | string | 否 | 额外偏好说明 |
+- **成功响应 data**：
+  ```json
+  {
+    "plan": {
+      "title": "AI 生成的计划标题",
+      "description": "计划描述...",
+      "startDate": "2026-06-05",
+      "endDate": "2026-06-30"
+    },
+    "tasks": [
+      {
+        "title": "学习 RSC 基础概念",
+        "description": "阅读官方文档...",
+        "taskType": "learning",
+        "estimatedMinutes": 60,
+        "sortOrder": 1
+      }
+    ]
+  }
+  ```
+- **错误码**：`40001` goalId 缺失或目标不存在；`40100` / `40300` / `50000`。
+- **关联表**：`learning_goal`、`learning_profile`（读取画像作为上下文）。
+- **备注**：返回草稿，不自动保存；用户确认后调 `POST /plans` + `POST /plans/:id/tasks` 批量保存。
+
+#### GET /api/private/learning/plans/:planId/tasks
+
+- **作用**：获取计划下的任务列表。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：path `planId`。
+- **成功响应 data**：
+  ```json
+  [
+    {
+      "id": 1,
+      "planId": 1,
+      "title": "学习 RSC 基础概念",
+      "description": "...",
+      "taskType": "learning",
+      "status": "completed",
+      "priority": 1,
+      "estimatedMinutes": 60,
+      "actualMinutes": 75,
+      "dueDate": "2026-06-10",
+      "completedAt": "2026-06-08T14:30:00Z",
+      "sortOrder": 1
+    }
+  ]
+  ```
+- **错误码**：`40100` / `40300` / `40400` plan 不存在 / `50000`。
+- **关联表**：`learning_task`。
+- **备注**：按 `sort_order ASC, id ASC` 返回。
+
+#### POST /api/private/learning/plans/:planId/tasks
+
+- **作用**：新增任务。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：path `planId`；JSON Body
+  | 字段 | 类型 | 必填 | 说明 |
+  |------|------|------|------|
+  | title            | string | 是 | 任务标题 |
+  | description      | string | 否 | 任务描述 |
+  | taskType         | string | 否 | 类型，默认 `learning` |
+  | status           | string | 否 | 状态，默认 `pending` |
+  | priority         | int    | 否 | 优先级，默认 0 |
+  | estimatedMinutes | int    | 否 | 预估耗时，默认 0 |
+  | dueDate          | string | 否 | 截止日期 `YYYY-MM-DD` |
+  | sortOrder        | int    | 否 | 排序，默认 0 |
+- **成功响应 data**：新增后完整 task。
+- **错误码**：`40001` / `40100` / `40300` / `40400` / `50000`。
+- **关联表**：`learning_task`。
+- **备注**：新增时自动更新 `learning_plan.total_tasks`。
+
+#### PUT /api/private/learning/tasks/:id
+
+- **作用**：更新任务。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：path `id`；body 字段同 POST，全部可选。
+- **成功响应 data**：更新后完整 task。
+- **错误码**：`40001` / `40100` / `40300` / `40400` / `50000`。
+- **关联表**：`learning_task`。
+- **备注**：状态改为 `completed` 时自动更新 `completed_at` 和 `learning_plan.completed_tasks`。
+
+#### DELETE /api/private/learning/tasks/:id
+
+- **作用**：删除任务（软删）。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：path `id`。
+- **成功响应 data**：`{ "id": 1 }`。
+- **错误码**：`40100` / `40300` / `40400` / `50000`。
+- **关联表**：`learning_task`。
+- **备注**：删除时自动更新 `learning_plan.total_tasks`。
+
+#### POST /api/private/learning/tasks/:taskId/progress
+
+- **作用**：记录学习进度。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：path `taskId`；JSON Body
+  | 字段 | 类型 | 必填 | 说明 |
+  |------|------|------|------|
+  | minutesSpent | int    | 是 | 本次耗时（分钟） |
+  | note         | string | 否 | 学习笔记 |
+- **成功响应 data**：新增后完整 progress 记录。
+- **错误码**：`40001` / `40100` / `40300` / `40400` / `50000`。
+- **关联表**：`learning_progress`、`learning_task`。
+- **备注**：自动累加 `learning_task.actual_minutes`。
+
+#### GET /api/private/learning/tasks/:taskId/progress
+
+- **作用**：获取任务的进度历史。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：path `taskId`。
+- **成功响应 data**：
+  ```json
+  [
+    {
+      "id": 1,
+      "taskId": 1,
+      "minutesSpent": 30,
+      "note": "完成了基础概念的学习",
+      "loggedAt": "2026-06-05T10:30:00Z"
+    }
+  ]
+  ```
+- **错误码**：`40100` / `40300` / `40400` / `50000`。
+- **关联表**：`learning_progress`。
+- **备注**：按 `logged_at DESC` 返回。
+
+## 待冻结接口（Stage 9 / FB-7：Learning Coach Agent）
+
+> 状态：✅ 已冻结于 2026-06-07。
+> 设计文档：`docs/superpowers/specs/2026-06-07-learning-coach-agent-design.md`。
+> 技术栈：Python 微服务（FastAPI + LangGraph + DeepSeek）。
+
+### Python Agent 服务接口（FastAPI）
+
+> Base URL：`http://localhost:8000`
+> Content-Type：`application/json`
+> 鉴权：`Authorization: Bearer <token>`（前端直连时校验，Go 代理时透传）
+
+#### POST /chat（流式对话）
+
+- **作用**：与 Learning Coach Agent 进行流式对话。
+- **鉴权**：Bearer Token（owner role）。
+- **请求参数**：JSON Body
+  | 字段 | 类型 | 必填 | 说明 |
+  |------|------|------|------|
+  | conversation_id | int | 否 | 对话 ID，空则新建对话 |
+  | message | string | 是 | 用户消息 |
+- **成功响应**：SSE 流
+  ```
+  data: {"type": "token", "content": "好"}
+  data: {"type": "token", "content": "的"}
+  data: {"type": "tool_call", "name": "get_learning_profile", "args": {}, "id": "call_xxx"}
+  data: {"type": "tool_result", "name": "get_learning_profile", "result": {...}}
+  data: {"type": "token", "content": "根据你的画像..."}
+  data: {"type": "done", "conversation_id": 123, "tokens_used": 150}
+  ```
+- **错误码**：`40100` 未登录；`40300` 权限不足；`50000` LLM 调用失败。
+- **关联表**：`agent_conversation`、`agent_message`。
+- **备注**：流式响应，前端需处理 SSE；Tool 调用过程对用户可见。
+
+#### POST /generate/plan
+
+- **作用**：生成学习计划（替换 Go 后端 mock，Go 代理调用此接口）。
+- **鉴权**：Bearer Token（owner role）。
+- **请求参数**：JSON Body
+  | 字段 | 类型 | 必填 | 说明 |
+  |------|------|------|------|
+  | goal_id | int | 是 | 目标 ID |
+  | preferences | string | 否 | 额外偏好说明 |
+- **成功响应 data**：
+  ```json
+  {
+    "plan": {
+      "title": "React Server Components 学习计划",
+      "description": "基于你的画像和目标...",
+      "startDate": "2026-06-08",
+      "endDate": "2026-07-08"
+    },
+    "tasks": [
+      {
+        "title": "学习 RSC 基础概念",
+        "description": "阅读官方文档...",
+        "taskType": "learning",
+        "estimatedMinutes": 60,
+        "sortOrder": 1
+      }
+    ]
+  }
+  ```
+- **错误码**：`40001` goal_id 缺失或目标不存在；`40100` / `40300` / `50000`。
+- **关联表**：`learning_goal`、`learning_profile`（读取画像作为上下文）。
+- **备注**：返回草稿，不自动保存；用户确认后调 Go `POST /api/private/learning/plans` + `POST /api/private/learning/plans/:planId/tasks` 保存。
+
+#### GET /chat/history/:conversation_id
+
+- **作用**：获取对话历史。
+- **鉴权**：Bearer Token（owner role）。
+- **请求参数**：path `conversation_id`。
+- **成功响应 data**：
+  ```json
+  [
+    {
+      "id": 1,
+      "role": "user",
+      "content": "帮我生成一个学习计划",
+      "createdAt": "2026-06-07T10:00:00Z"
+    },
+    {
+      "id": 2,
+      "role": "assistant",
+      "content": "好的，让我先看一下你的学习画像...",
+      "toolCalls": [{"name": "get_learning_profile", "args": {}, "id": "call_xxx"}],
+      "createdAt": "2026-06-07T10:00:05Z"
+    }
+  ]
+  ```
+- **错误码**：`40100` / `40300` / `40400` / `50000`。
+- **关联表**：`agent_message`。
+
+### Go 后端接口（代理 + 对话管理）
+
+#### POST /api/private/learning/plans/generate（改造）
+
+- **作用**：代理调用 Python `/generate/plan`，替换现有 mock 实现。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：同 Python `/generate/plan`。
+- **成功响应 data**：同 Python `/generate/plan`。
+- **错误码**：同 Python `/generate/plan`（代理透传）。
+- **备注**：Go 后端不处理 LLM 调用，仅做代理。
+
+#### GET /api/private/agent/conversations
+
+- **作用**：获取用户的对话列表。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：无。
+- **成功响应 data**：
+  ```json
+  [
+    {
+      "id": 1,
+      "title": "React 学习计划",
+      "status": "active",
+      "createdAt": "2026-06-07T10:00:00Z",
+      "updatedAt": "2026-06-07T10:30:00Z"
+    }
+  ]
+  ```
+- **错误码**：`40100` / `40300` / `50000`。
+- **关联表**：`agent_conversation`。
+- **备注**：按 `updated_at DESC` 返回。
+
+#### DELETE /api/private/agent/conversations/:id
+
+- **作用**：删除对话（物理删除）。
+- **鉴权**：Bearer Token + owner role。
+- **请求参数**：path `id`。
+- **成功响应 data**：`{ "id": 1 }`。
+- **错误码**：`40100` / `40300` / `40400` / `50000`。
+- **关联表**：`agent_conversation`、`agent_message`（级联删除）。
+- **备注**：删除对话时同时删除关联的所有消息。
+
+---
 
 ## 待冻结接口（Stage 6 / FB-4：portfolio_project）
 

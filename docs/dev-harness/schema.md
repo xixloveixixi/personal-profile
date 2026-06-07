@@ -293,9 +293,160 @@
 - **关联接口**：`GET /api/health`（写入）、`GET /api/admin/health-stats`（读取统计）。
 - **备注**：不做软删除，日志表轻量化；未来可加定时清理。
 
+## 待冻结表（Stage 8 / FB-6）
+
+> 状态：✅ 已冻结于 2026-06-04。
+> AI 调用方式：后端 Go 调用 DeepSeek API（OpenAI 兼容），API Key 通过 `DEEPSEEK_API_KEY` 环境变量配置。
+
+### learning_plan
+
+- **用途**：学习计划，可关联 learning_goal（可选），支持 AI 生成。
+- **DDL**：
+  ```sql
+  CREATE TABLE learning_plan (
+    id                BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    owner_id          BIGINT UNSIGNED NOT NULL              COMMENT '所属用户，FK sys_user.id',
+    goal_id           BIGINT UNSIGNED NULL                  COMMENT '关联目标，FK learning_goal.id，可为空',
+    title             VARCHAR(255)    NOT NULL              COMMENT '计划标题',
+    description       TEXT            NULL                  COMMENT '计划描述',
+    source            VARCHAR(32)     NOT NULL DEFAULT 'manual' COMMENT '来源：manual / ai_generated',
+    status            VARCHAR(32)     NOT NULL DEFAULT 'draft' COMMENT '状态：draft / active / completed / archived',
+    start_date        DATE            NULL                  COMMENT '计划开始日期',
+    end_date          DATE            NULL                  COMMENT '计划结束日期',
+    total_tasks       INT             NOT NULL DEFAULT 0    COMMENT '任务总数（冗余）',
+    completed_tasks   INT             NOT NULL DEFAULT 0    COMMENT '已完成任务数（冗余）',
+    created_at        DATETIME(3)     NOT NULL,
+    updated_at        DATETIME(3)     NOT NULL,
+    deleted_at        DATETIME(3)     NULL,
+    KEY idx_owner_status (owner_id, status),
+    KEY idx_goal (goal_id),
+    KEY idx_deleted_at (deleted_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='学习计划';
+  ```
+- **索引**：
+  - `idx_owner_status(owner_id, status)`：支撑按 owner 和状态过滤计划列表。
+  - `idx_goal(goal_id)`：支撑按目标查询关联计划。
+  - `idx_deleted_at`：GORM 软删除查询过滤。
+- **关联接口**：`GET/POST/PUT/DELETE /api/private/learning/plans`、`POST /api/private/learning/plans/generate`。
+- **备注**：`goal_id` 可为空，允许独立计划；`source` 区分手动创建和 AI 生成。
+
+### learning_task
+
+- **用途**：学习任务，关联 learning_plan。
+- **DDL**：
+  ```sql
+  CREATE TABLE learning_task (
+    id                BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    owner_id          BIGINT UNSIGNED NOT NULL              COMMENT '所属用户，FK sys_user.id',
+    plan_id           BIGINT UNSIGNED NOT NULL              COMMENT '关联计划，FK learning_plan.id',
+    title             VARCHAR(255)    NOT NULL              COMMENT '任务标题',
+    description       TEXT            NULL                  COMMENT '任务描述',
+    task_type         VARCHAR(64)     NOT NULL DEFAULT 'learning' COMMENT '任务类型：learning / practice / review / project',
+    status            VARCHAR(32)     NOT NULL DEFAULT 'pending' COMMENT '状态：pending / in_progress / completed / skipped',
+    priority          INT             NOT NULL DEFAULT 0    COMMENT '优先级，升序',
+    estimated_minutes INT             NOT NULL DEFAULT 0    COMMENT '预估耗时（分钟）',
+    actual_minutes    INT             NOT NULL DEFAULT 0    COMMENT '实际耗时（分钟）',
+    due_date          DATE            NULL                  COMMENT '截止日期',
+    completed_at      DATETIME(3)     NULL                  COMMENT '完成时间',
+    sort_order        INT             NOT NULL DEFAULT 0    COMMENT '排序',
+    created_at        DATETIME(3)     NOT NULL,
+    updated_at        DATETIME(3)     NOT NULL,
+    deleted_at        DATETIME(3)     NULL,
+    KEY idx_plan_status (plan_id, status),
+    KEY idx_owner_status (owner_id, status),
+    KEY idx_deleted_at (deleted_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='学习任务';
+  ```
+- **索引**：
+  - `idx_plan_status(plan_id, status)`：支撑按计划和状态过滤任务。
+  - `idx_owner_status(owner_id, status)`：支撑跨计划查询用户任务。
+  - `idx_deleted_at`：GORM 软删除。
+- **关联接口**：`GET/POST/PUT/DELETE /api/private/learning/plans/:planId/tasks`。
+- **备注**：`task_type` 枚举 `learning` / `practice` / `review` / `project`。
+
+### learning_progress
+
+- **用途**：学习进度日志，记录任务的进度更新。
+- **DDL**：
+  ```sql
+  CREATE TABLE learning_progress (
+    id                BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    owner_id          BIGINT UNSIGNED NOT NULL              COMMENT '所属用户，FK sys_user.id',
+    task_id           BIGINT UNSIGNED NOT NULL              COMMENT '关联任务，FK learning_task.id',
+    minutes_spent     INT             NOT NULL DEFAULT 0    COMMENT '本次耗时（分钟）',
+    note              TEXT            NULL                  COMMENT '学习笔记',
+    logged_at         DATETIME(3)     NOT NULL              COMMENT '记录时间',
+    created_at        DATETIME(3)     NOT NULL,
+    KEY idx_task (task_id),
+    KEY idx_owner_logged (owner_id, logged_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='学习进度日志';
+  ```
+- **索引**：
+  - `idx_task(task_id)`：支撑按任务查询进度历史。
+  - `idx_owner_logged(owner_id, logged_at)`：支撑按时间查询用户学习记录。
+- **关联接口**：`POST /api/private/learning/tasks/:taskId/progress`、`GET /api/private/learning/tasks/:taskId/progress`。
+- **备注**：不做软删除（日志表轻量化）；每次 POST 累加 `learning_task.actual_minutes`。
+
+## 待冻结表（Stage 9 / FB-7：Learning Coach Agent）
+
+> 状态：✅ 已冻结于 2026-06-07。
+> 设计文档：`docs/superpowers/specs/2026-06-07-learning-coach-agent-design.md`。
+
+### agent_conversation
+
+- **用途**：Agent 对话会话，存储用户与 Learning Coach Agent 的对话上下文。
+- **DDL**：
+  ```sql
+  CREATE TABLE agent_conversation (
+    id              BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    owner_id        BIGINT UNSIGNED NOT NULL              COMMENT '所属用户，FK sys_user.id',
+    title           VARCHAR(255)    NOT NULL DEFAULT ''   COMMENT '对话标题（自动生成或用户设置）',
+    status          VARCHAR(32)     NOT NULL DEFAULT 'active' COMMENT '状态：active/archived',
+    metadata        JSON            NULL                  COMMENT '扩展元数据（如意图分类结果）',
+    created_at      DATETIME(3)     NOT NULL,
+    updated_at      DATETIME(3)     NOT NULL,
+    KEY idx_owner_status (owner_id, status),
+    KEY idx_created (created_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Agent 对话会话';
+  ```
+- **索引**：
+  - `idx_owner_status(owner_id, status)`：支撑按用户和状态过滤对话列表。
+  - `idx_created(created_at)`：支撑按时间排序。
+- **关联接口**：`GET /api/private/agent/conversations`、`DELETE /api/private/agent/conversations/:id`。
+- **备注**：不做软删除（对话可物理删除或归档）；`metadata` 存储扩展信息如对话意图、Token 消耗统计等。
+
+### agent_message
+
+- **用途**：Agent 对话消息，存储每条消息的内容和 Tool 调用记录。
+- **DDL**：
+  ```sql
+  CREATE TABLE agent_message (
+    id                BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    conversation_id   BIGINT UNSIGNED NOT NULL              COMMENT '所属对话，FK agent_conversation.id',
+    role              VARCHAR(32)     NOT NULL              COMMENT '角色：user/assistant/system/tool',
+    content           TEXT            NOT NULL              COMMENT '消息内容',
+    tool_calls        JSON            NULL                  COMMENT 'Tool 调用记录（assistant 消息）',
+    tool_call_id      VARCHAR(64)     NULL                  COMMENT 'Tool 调用 ID（tool 消息）',
+    tokens_used       INT             NOT NULL DEFAULT 0    COMMENT 'Token 消耗',
+    created_at        DATETIME(3)     NOT NULL,
+    KEY idx_conversation (conversation_id),
+    KEY idx_created (created_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='Agent 对话消息';
+  ```
+- **索引**：
+  - `idx_conversation(conversation_id)`：支撑按对话查询消息历史。
+  - `idx_created(created_at)`：支撑按时间排序。
+- **关联接口**：Python Agent 服务内部读写，Go 后端不直接操作。
+- **备注**：
+  - `role` 枚举值：`user`（用户消息）、`assistant`（Agent 回复）、`system`（系统提示）、`tool`（Tool 返回结果）。
+  - `tool_calls` 存储 assistant 消息中的 Tool 调用详情，格式：`[{"name": "get_learning_profile", "args": {}, "id": "call_xxx"}]`。
+  - `tool_call_id` 用于 tool 消息关联到对应的 tool_call。
+  - 不做软删除（消息随对话一起删除）。
+
 ## 本阶段不做
 
-- 不做学习/Agent 相关表（SDD 10.9-10.17）。
+- 不做 `agent_memory` 表（Agent 长期记忆，留 Phase 6）。
+- 不做 `weekly_review` 周复盘表（留 Phase 4）。
 - 不做用户注册接口 / 多用户体系。
 - 不做 `portfolio_project_tech` 子表（technologies 用 JSON 字段存储）。
 
