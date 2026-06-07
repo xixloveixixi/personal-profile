@@ -31,7 +31,9 @@ async def chat(request: ChatRequest):
     }
 
     # Run agent (non-streaming for MVP)
-    result = agent.invoke(initial_state)
+    thread_id = str(request.conversation_id or "new")
+    config = {"configurable": {"thread_id": thread_id}}
+    result = agent.invoke(initial_state, config=config)
 
     # Extract response
     last_message = result["messages"][-1]
