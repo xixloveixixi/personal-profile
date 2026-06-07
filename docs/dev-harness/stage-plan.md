@@ -551,7 +551,215 @@
 
 ---
 
-## 当前阶段：阶段 7 学习工作台最小集 (FB-5)
+## 当前阶段：阶段 9 Learning Coach Agent (FB-7)
+
+### 阶段目标
+
+构建个性化学习教练 Agent 系统：基于 Python + LangGraph 实现智能对话，支持学习计划生成、面试复盘分析、进度跟踪和周复盘功能。
+
+### 本阶段做什么
+
+- 新增 Python Agent 微服务（`agent-service/`）：
+  - FastAPI + LangGraph + DeepSeek 调用
+  - 单 Agent + 多工具架构
+  - 流式对话接口（SSE）
+- 新增 `agent_conversation` 表 —— 对话会话。
+- 新增 `agent_message` 表 —— 对话消息历史。
+- 实现 Agent Tools：
+  - 数据读取：`get_learning_profile` / `get_learning_goals` / `get_learning_plans` / `get_learning_progress`
+  - 数据写入：`create_learning_plan` / `create_learning_task` / `update_learning_progress` / `update_learning_profile`
+  - 分析工具：`analyze_interview_feedback` / `generate_weekly_review`
+- Go 后端代理调用 Python `/generate/plan` 接口（替换现有 mock）。
+- Go 后端新增对话管理接口：`GET /api/private/agent/conversations`、`DELETE /api/private/agent/conversations/:id`。
+- 前端新增对话界面（流式接收）。
+- Docker Compose 编排（frontend + backend + agent + mysql）。
+
+### 本阶段不做什么
+
+- 不做发送提醒功能（`send_reminder`）。
+- 不做外部学习资源搜索。
+- 不做多 Agent 协作（MVP 用单 Agent + 多工具）。
+- 不做进度可视化图表。
+
+### 闸门检查
+
+#### Gate A：需求闸门
+
+- [ ] 是否确认本阶段做 Python Agent 微服务 + 对话历史 + 替换 mock？
+- [ ] 是否确认 Agent 架构为单 Agent + 多工具？
+- [ ] 验收标准：对话可流式返回 + Tools 可调用 + Docker Compose 可启动？
+
+#### Gate B：设计闸门
+
+- [ ] `schema.md` 中 `agent_conversation` / `agent_message` DDL 是否已冻结？
+- [ ] `api-contract.md` 中 Python 服务接口 + Go 代理接口是否已冻结？
+- [ ] LangGraph 状态机设计是否确认（classify → plan_gen/interview/progress → confirm → execute → respond）？
+- [ ] Docker Compose 服务编排是否确认（4 个服务）？
+- [ ] System Prompt 是否已设计？
+
+#### Gate C：学习闸门
+
+- [ ] 是否了解 LangGraph 基本概念（State、Node、Edge、Checkpoint）？
+- [ ] 是否了解 FastAPI + SSE 流式响应？
+- [ ] 是否了解 DeepSeek API 调用（OpenAI 兼容）？
+- [ ] 是否了解 Docker Compose 基本用法？
+
+#### Gate D：编码闸门
+
+- [ ] Python 3.11+ 环境已准备。
+- [ ] Docker / Docker Compose 已安装。
+- [ ] `DEEPSEEK_API_KEY` 环境变量配置方式已确认。
+- [ ] 新增目录位置已确认（`agent-service/`）。
+
+#### Gate E：验证闸门
+
+- [ ] Python Agent 服务可独立启动。
+- [ ] `POST /chat` 流式对话正常返回。
+- [ ] `POST /generate/plan` 调用 DeepSeek 返回计划（替代 mock）。
+- [ ] Tools 可正常调用（读取画像、创建计划等）。
+- [ ] Go 后端代理调用 Python 服务正常。
+- [ ] `agent_conversation` / `agent_message` 表可写入。
+- [ ] Docker Compose 一键启动 4 个服务。
+- [ ] 前端对话界面可流式接收。
+- [ ] `npm run build` 通过。
+- [ ] `go build ./...` 通过。
+
+#### Gate F：沉淀闸门
+
+- [ ] `progress-log.md` 已更新。
+- [ ] 踩坑写入 `pitfalls.md`。
+- [ ] 下一阶段范围已明确。
+
+### 分阶段交付（Phase）
+
+| Phase | 能力 | 预估工作量 |
+| --- | --- | --- |
+| Phase 1 | Python 服务搭建 + LangGraph 基础 + DeepSeek 调用 + 简单对话 | 2-3 天 |
+| Phase 2 | 读取画像 + 目标 → 生成计划（替换现有 mock） | 2 天 |
+| Phase 3 | 面试复盘分析 → 更新画像/生成改进计划 | 2-3 天 |
+| Phase 4 | 进度跟踪 → 周复盘 → 调整计划建议 | 2-3 天 |
+| Phase 5 | 对话历史持久化 + 历史回顾 UI | 2 天 |
+| Phase 6 | Agent 长期记忆 + 个性化响应 | 3 天 |
+
+### 降级策略
+
+- LangGraph 学习成本高：先用简单 Chain，后续再迁移到 Graph。
+- DeepSeek 调用不稳定：先返回 mock，LLM 后补。
+- Docker Compose 配置复杂：先本地多进程启动。
+- 流式对话复杂：先实现同步响应。
+
+### 进入前置条件
+
+- [x] FB-6 Gate E 全部通过。
+- [ ] `schema.md` 中 `agent_conversation` / `agent_message` DDL 已冻结。
+- [ ] `api-contract.md` 中相关接口已冻结。
+- [ ] 设计文档已确认：`docs/superpowers/specs/2026-06-07-learning-coach-agent-design.md`。
+
+---
+
+## 阶段 8 学习计划功能 (FB-6)（已完成）
+
+### 阶段目标
+
+实现学习计划管理功能：目标可拆解为计划（learning_plan），计划可拆解为任务（learning_task），任务可记录进度（learning_progress）；并提供 AI 单次生成计划的能力。
+
+### 本阶段做什么
+
+- 新增 `learning_plan` 表（DDL + migration + 种子 SQL）—— 学习计划，可关联 learning_goal。
+- 新增 `learning_task` 表（DDL + migration + 种子 SQL）—— 学习任务，关联 learning_plan。
+- 新增 `learning_progress` 表（DDL + migration + 种子 SQL）—— 学习进度日志，关联 learning_task。
+- 实现私有 CRUD 接口（owner only）：
+  - Plans：`GET/POST/PUT/DELETE /api/private/learning/plans`
+  - Tasks：`GET/POST /api/private/learning/plans/:planId/tasks`、`PUT/DELETE /api/private/learning/tasks/:id`
+  - Progress：`GET/POST /api/private/learning/tasks/:taskId/progress`
+- 实现 AI 生成计划接口：`POST /api/private/learning/plans/generate`（单次 LLM 调用，返回计划草稿）。
+- 前端新增学习计划管理页面（`/admin/learning/plans`）。
+- 前端新增任务管理页面（`/admin/learning/plans/:id`）。
+
+### 本阶段不做什么
+
+- 不做 Agent 对话历史表（`agent_conversation` / `agent_message` / `agent_memory`）。
+- 不做多轮对话、上下文记忆。
+- 不做 `weekly_review` 周复盘表。
+- 不做进度可视化图表。
+- 不做任务提醒/通知功能。
+
+### 闸门检查
+
+#### Gate A：需求闸门
+
+- [x] 是否确认本阶段只做 `learning_plan` + `learning_task` + `learning_progress` 三张表？
+- [x] 是否确认 AI 生成计划为单次 LLM 调用，不做 Agent 对话？
+- [x] 验收标准：curl 全通 + 前端计划/任务管理页面可用 + AI 生成计划返回草稿 + `npm run build` 通过？
+
+#### Gate B：设计闸门
+
+- [x] `schema.md` 中 `learning_plan` / `learning_task` / `learning_progress` DDL 是否已冻结？
+- [x] `api-contract.md` 中 12 个私有接口是否已冻结？
+- [x] AI 生成计划的 LLM 调用方式是否确认（后端 Go 调用 DeepSeek API）？
+- [x] 前端 API client 新增函数位置是否确认（`lib/api/private.ts`）？
+- [x] 前端页面路由是否确认（`/admin/learning/plans`、`/admin/learning/plans/:id`）？
+
+#### Gate C：学习闸门
+
+- [x] 是否了解 GORM 关联查询（plan → tasks）的基本用法？
+- [x] 是否了解 Go 调用 DeepSeek API 的基本用法？
+- [x] 是否了解 Next.js 动态路由 `[id]` 的用法？
+
+#### Gate D：编码闸门
+
+- [x] `go build ./...` 当前通过。
+- [x] `npm run build` 当前通过。
+- [x] 新增文件位置已确认（model/repo/handler）。
+- [x] LLM API Key 配置方式已确认（env 变量）。
+
+#### Gate E：验证闸门
+
+- [x] `learning_plan` 表已建，种子数据可灌入。
+- [x] `learning_task` 表已建，种子数据可灌入。
+- [x] `learning_progress` 表已建。
+- [x] 私有 API：Plans CRUD 4 个接口 curl 全通。
+- [x] 私有 API：Tasks CRUD 4 个接口 curl 全通。
+- [x] 私有 API：Progress GET/POST 2 个接口 curl 全通。
+- [x] 私有 API：`POST /api/private/learning/plans/generate` 返回计划草稿（mock）。
+- [x] 前端 `/admin/learning/plans` 页面可增删改查计划。
+- [x] 前端 `/admin/learning/plans/:id` 页面可管理任务。
+- [x] `npm run build` 通过。
+- [x] `go build ./...` 通过。
+
+#### Gate F：沉淀闸门
+
+- [x] `progress-log.md` 已更新。
+- [x] 踩坑写入 `pitfalls.md`（subagent 漏路由注册、MySQL 中文编码）。
+- [x] 下一阶段范围已明确。
+
+### 节奏建议
+
+| 天数 | 目标 | 产出 |
+| --- | --- | --- |
+| Day 1 | 确认 Gate A/B，冻结契约，写 migration + 种子 SQL | 3 张表可用 |
+| Day 2 | 实现 model + repository + Plans CRUD handler | 计划接口 curl 全通 |
+| Day 3 | 实现 Tasks CRUD + Progress handler | 任务和进度接口 curl 全通 |
+| Day 4 | 实现 AI 生成计划接口 | generate 接口返回草稿 |
+| Day 5 | 前端 /admin/learning/plans 页面 | 计划管理 UI |
+| Day 6 | 前端 /admin/learning/plans/:id 任务页面 | 任务管理 UI |
+| Day 7 | build 验收 + Gate F | 阶段完成 |
+
+### 降级策略
+
+- GORM 关联查询复杂：先不做级联，手动两次查询。
+- AI 生成计划 LLM 不可用：先返回 mock 数据，LLM 后补。
+- 前端页面耗时：先只实现列表 + 新增，编辑/删除后补。
+
+### 进入前置条件
+
+- [x] FB-5 Gate E/F 全部通过。
+- [x] `schema.md` 中 3 张表 DDL 已冻结。
+- [x] `api-contract.md` 中私有接口已冻结。
+
+---
+
+## 阶段 7 学习工作台最小集 (FB-5)（已完成）
 
 ### 阶段目标
 
