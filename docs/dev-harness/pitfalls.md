@@ -1,8 +1,8 @@
 # 研发 Harness 踩坑记录
 ## 索引
-- 流程类：范围控制、学习发散、文档同步、阶段切换标题、Gate C 勾选权、多 Track 当前阶段游标
+- 流程类：范围控制、学习发散、文档同步、阶段切换标题、Gate C 勾选权、多 Track 当前阶段游标、subagent 漏路由注册
 - Go 工程：go.mod 位置、GOPROXY、response 包
-- 工具链：进入新栈前置检查、MySQL formula 版本、前后端开发端口 CORS
+- 工具链：进入新栈前置检查、MySQL formula 版本、前后端开发端口 CORS、MySQL 中文编码、Next.js middleware 缓存
 - 前后端联调：API 响应字段命名风格变更、iconMap 大小写不匹配
 - Antd：Modal destroyOnClose 导致 setFieldsValue 失效
 
@@ -427,3 +427,71 @@ export const iconMap = {
 ### 下次如何避免
 
 定义 icon 映射表时，同时覆盖常见的大小写和中文变体。数据库存储时统一使用小写（或约定一种风格），并在 api-contract.md 中明确 icon 字段的推荐值列表。
+
+## subagent 漏路由注册
+
+### 场景
+
+FB-6 使用 subagent 并行开发后端，后端 agent 创建了 handler 文件，但漏了在 router.go 注册路由。启动后端服务后发现新接口全部 404。
+
+### 原因
+
+subagent 对任务的理解不完整，可能只关注了 handler 代码生成，忽略了路由注册这一关键步骤。
+
+### 解决方案
+
+手动在 `internal/router/router.go` 中添加了 11 条学习计划路由。
+
+### 下次如何避免
+
+subagent 任务描述中明确要求"修改 router.go 注册路由"，并在验收时检查路由是否出现在启动日志中。
+
+## MySQL 种子数据中文乱码
+
+### 场景
+
+FB-6 执行种子 SQL 后，API 返回的中文任务标题显示为乱码（如 `é˜…è¯» RSC`）。
+
+### 原因
+
+mysql 命令行客户端默认连接编码可能不是 utf8mb4，导致插入的中文数据被错误编码。
+
+### 解决方案
+
+执行种子 SQL 时指定字符集：
+```bash
+mysql -u pp_app -p --default-character-set=utf8mb4 personal_profile < seed.sql
+```
+
+### 下次如何避免
+
+所有 MySQL 命令行操作统一加 `--default-character-set=utf8mb4` 参数，或在 `~/.my.cnf` 中配置默认字符集。
+
+## Next.js middleware module not found 导致白屏
+
+### 场景
+
+FB-6 验收时浏览器控制台报错 `Cannot find the middleware module`，所有页面无法加载。
+
+### 原因
+
+Next.js 的 `.next` 缓存目录中存有旧的 middleware 编译产物，但实际代码或配置已变化，导致运行时找不到模块。常见于：
+- 删除或重命名了 `middleware.ts`
+- 切换分支后 `.next` 残留旧缓存
+- node_modules 依赖升级
+
+### 解决方案
+
+```bash
+rm -rf .next && npm run dev
+```
+
+### 下次如何避免
+
+在 harness CODING 阶段的前端验收步骤前，先清理缓存后再启动：
+
+```bash
+rm -rf .next && npm run dev
+```
+
+如果连续两次验收都报 middleware 错误，首先怀疑缓存问题而非代码问题。

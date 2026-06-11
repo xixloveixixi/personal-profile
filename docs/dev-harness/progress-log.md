@@ -697,7 +697,44 @@
 ### 明日第一步
 - 进入下一阶段开发。
 
-## 2026-06-04（FB-5 Day 1-4：学习工作台全量实现）
+## 2026-06-04（FB-6 学习计划功能）
+
+### 今日目标
+- 实现 FB-6：学习计划 + 任务 + 进度管理功能。
+
+### 今日完成
+- 冻结契约：`schema.md` 3 张表 DDL + `api-contract.md` 12 个接口。
+- 编写 `backend/migrations/0004_learning_plan.sql` 和 `seed_004_learning.sql`。
+- **使用 subagent 并行开发**：
+  - go-api-implementer：实现 3 model + 3 repo + 11 handler（~3min）
+  - frontend-engineer：实现 12 API 函数 + 2 页面（~3.7min）
+- 手动修复：router.go 路由注册（subagent 漏了）、菜单入口添加。
+- 修复种子数据中文乱码：重新用 `--default-character-set=utf8mb4` 灌入。
+- curl 验收 11 个接口全通。
+- 浏览器验收前端页面通过。
+- Gate E 11/11 全部通过。
+
+### 当前阻塞
+- AI 生成计划接口当前返回 mock 数据，DeepSeek 接入留后续。
+
+### 关键决策
+- **并行开发模式**：契约冻结后使用 subagent 前后端并行开发，效率显著提升。
+- AI 生成计划采用 MVP 方案（单次 LLM 调用），不做 Agent 对话历史。
+- 后端 Go 调用 DeepSeek API（OpenAI 兼容），`DEEPSEEK_API_KEY` 环境变量配置。
+
+### 踩坑记录
+- subagent 可能遗漏路由注册，需要验收时检查路由是否生效。
+- MySQL 种子数据中文需使用 `--default-character-set=utf8mb4` 灌入。
+
+### Gate E 状态
+- [x] 3 张表 + 种子数据
+- [x] 11 个 API curl 全通
+- [x] 前端计划/任务管理页面
+- [x] npm/go build 通过
+
+### 明日第一步
+- 接入 DeepSeek API 实现真正的 AI 生成计划功能（可选）。
+- 或进入下一阶段开发。
 
 ### 今日目标
 - 使用 subagents 并行完成 FB-5 后端 + 前端全量实现，curl 验收通过。

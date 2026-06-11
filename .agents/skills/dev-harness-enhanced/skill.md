@@ -1,208 +1,219 @@
 ---
 name: dev-harness-enhanced
-description: 增强版研发 Harness，统一协调 6-Agent 流水线与 Gate 流程。当用户说"开始新阶段"、"推进 Day N"、"过 Gate"、"新需求"、"启动流水线"时触发。
+description: |
+  研发 Harness FSM 对话协调器。**本项目所有开发任务必须通过此 skill 的 FSM 状态机驱动**。
+  触发场景：用户说"开始/开启/进入 下一阶段"、"推进 Day N"、"过 Gate"、"新需求"、"状态"、
+  "继续开发"、"写代码"、"实现功能"，或任何涉及编码的请求。
+version: v3.4.0
+type: 工作流型
+trigger: 显式（触发词）+ 隐式（检测到编码意图时主动确认当前 FSM 状态）
+dependencies: docs/dev-harness/stage-plan.md, docs/dev-harness/api-contract.md, docs/dev-harness/schema.md, docs/dev-harness/progress-log.md, docs/dev-harness/pitfalls.md
 ---
 
-# 增强版研发 Harness
+# 研发 Harness v3 — FSM 驱动开发流程
 
-统一入口，协调 6-Agent 流水线与 Gate 检查流程。
-
-## 核心架构
+## 状态图
 
 ```
-Gate A (需求) → Gate B (设计) → Gate C (学习) → Gate D (编码) → Gate E (验收) → Gate F (沉淀)
-     ↓              ↓              ↓              ↓              ↓              ↓
-  pipeline      契约冻结       强制学习      6-Agent 流水线   测试报告       产出物归档
+                    ┌───────────────────────────────────────┐
+                    │          用户确认驱动                  │
+                    │  (AI 不主动推进非自动状态)              │
+                    └───────────────────────────────────────┘
+
+[*] → REQUIREMENT ──用户确认范围──→ DESIGN ──用户确认冻结──→ LEARNING ──用户确认已学──→ CODING
+ ↑       ↑                        ↑                          │                      │
+ │       │                        │                          │                      │
+ │       │                        └── spec-gap 发现设计问题 ──┘                      │
+ │       └── spec-gap 发现需求问题 ──────────────────────────────────────┐            │
+ │                                                                      │            │
+ └───────────────────────────────────────────────────────────────────────┘            │
+                                                                                      ▼
+                                                                               GUARD_CHECK
+                                                                                  │
+                                                                     ┌──────────┼──────────┐
+                                                                     ▼          ▼          ▼
+                                                                  AUTO_FIX  HARD_FAIL  ACCEPTANCE
+                                                                     │          │          │
+                                                                     └──→←──────┘     ┌──┴──┐
+                                                                                      ▼    ▼
+                                                                                  WRAP_UP SPEC_GAP
+                                                                                     │    │    │
+                                                                                     │    ▼    ▼
+                                                                                     │  REQUIREMENT DESIGN CODING
+                                                                                     ▼
+                                                                              WORKFLOW_REVIEW (自动)
+                                                                                     │
+                                                                         ┌───────────┴───────────┐
+                                                                         ▼                       ▼
+                                                                      无问题                  发现问题
+                                                                         ▼                       ▼
+                                                                        [*]              修改 workflow 定义
+                                                                                               ↓
+                                                                                         记录变更理由
+                                                                                               ↓
+                                                                                        下次流程生效
 ```
 
-## 当前阶段判断
+## FSM 状态定义
 
-读取 `docs/dev-harness/stage-plan.md` 和 `.comate/pipeline/PIPELINE.md` 判断当前状态。
+| 状态 | 含义 | 谁有权触发离开 | 离开条件 |
+|------|------|--------------|---------| 
+| REQUIREMENT | 需求确认中 | **用户** | 用户回复"确认" |
+| DESIGN | 设计与契约冻结中 | **用户** | 契约已冻结 + 用户说"确认冻结" |
+| LEARNING | 学习确认中 | **用户** | 用户说"了解了/继续" |
+| CODING | 编码执行中 | AI（代码写完后自动） | 代码写完，自动进入 GUARD_CHECK |
+| GUARD_CHECK | 门禁自动检查中 | AI（自动执行） | 全部通过 → ACCEPTANCE；软门禁失败 → AUTO_FIX；硬门禁失败 → HARD_FAIL |
+| AUTO_FIX | 自动修复门禁问题 | AI（触发修复 skill） | 修复成功 → GUARD_CHECK；连续 2 轮相同错误 → HARD_FAIL |
+| HARD_FAIL | 硬门禁失败 | **用户** | 用户说"修复"或"忽略" |
+| ACCEPTANCE | 验收中 | **用户** | 用户说"通过" → WRAP_UP；用户说"不对" → SPEC_GAP |
+| SPEC_GAP | 差异分析中 | AI（分析给出结论） + **用户确认回退目标** | 用户同意回退目标 |
+| WRAP_UP | 归档沉淀中 | AI 执行 + **用户确认** | 归档完成 → WORKFLOW_REVIEW |
+| WORKFLOW_REVIEW | 流程自检中 | AI（自动执行） | 无问题 → 结束；有问题 → 修改 workflow 定义后结束 |
 
-## Gate 流程
+**核心规则**：只有用户能驱动非自动状态的离开。AI 检查完条件后必须等待用户确认才能推进。
 
-### Gate A: 需求闸门
-**触发词**: "新需求"、"启动流水线"、"开始阶段 X"
+## FSM 状态输出
 
-**动作**:
-1. 检查 `.comate/pipeline/PIPELINE.md` 是否 idle
-2. 调用 `requirement-designer` agent 生成 PRD
-3. 输出 PRD 摘要，等待用户确认
-4. 用户确认后，标记 Gate A 完成
-
-**输出**:
-- `requirements/REQ-XXX/PRD.md`
-- 人工确认记录
-
-### Gate B: 设计闸门
-**触发词**: "冻结契约"、"确认设计"
-
-**动作**:
-1. 读取 PRD.md
-2. 引导用户设计接口 + 表结构
-3. 写入/更新 `docs/dev-harness/api-contract.md`（冻结标记）
-4. 写入/更新 `docs/dev-harness/schema.md`（冻结标记）
-5. 标记 Gate B 完成
-
-**输出**:
-- api-contract.md 更新（冻结标记）
-- schema.md 更新（冻结标记）
-
-### Gate C: 学习闸门
-**触发词**: "开始学习"、"过 Gate C"
-
-**动作**:
-1. 判断是否涉及新技术栈
-2. 如需学习，提供最小学习材料（API 列表 + 示例）
-3. 等待用户确认已学习
-4. **AI 不得代勾 Gate C**，必须用户自己勾
-
-**学习材料格式**:
-```markdown
-## 最小学习材料
-
-### GORM Upsert 模式
-- API: `db.Where("owner_id = ?", ownerID).FirstOrCreate(&profile)`
-- 示例：...（3-5 行代码）
-
-### Next.js Server Component
-- fetch 默认缓存
-- cache: 'no-store' 禁用缓存
-```
-
-### Gate D: 编码闸门
-**触发词**: "开始编码"、"推进"、"跑流水线"
-
-**动作**:
-1. 确认 Gate B 已冻结（契约存在）
-2. 启动 6-Agent 流水线：
-   - `go-api-implementer` 实现后端
-   - `frontend-engineer` 实现前端（如有）
-   - `test-case-designer` 设计测试
-   - `integration-test-runner` 执行测试
-3. 流水线产出写入 `.comate/pipeline/requirements/REQ-XXX/`
-4. 标记 Gate D 完成
-
-**流水线监控**:
-- 每阶段完成后报告产出物
-- 测试失败时提示修复
-- 用户输入"继续"推进下一阶段
-
-### Gate E: 验收闸门
-**触发词**: "验收"、"过 Gate E"、"测试通过"
-
-**动作**:
-1. 读取流水线测试报告（`integration-test-report.md`）
-2. 对比 api-contract.md 契约
-3. 人工抽检核心场景
-4. 输出验收清单：
-   - [ ] 代码符合契约
-   - [ ] 测试全部通过
-   - [ ] `go build ./...` 通过
-   - [ ] `npm run build` 通过
-5. 用户确认后标记 Gate E 完成
-
-### Gate F: 沉淀闸门
-**触发词**: "完成"、"归档"、"更新日志"
-
-**动作**:
-1. 更新 `docs/dev-harness/progress-log.md`
-2. 更新 `docs/dev-harness/pitfalls.md`（如有踩坑）
-3. 归档 PRD 到 `requirements/REQ-XXX/` 持久化
-4. 重置 `.comate/pipeline/PIPELINE.md` 为 idle
-5. **AI 反思：检查是否有可复用经验沉淀为 Skill**
-6. 输出阶段总结
-
-**AI 反思检查清单**:
-- [ ] 本次开发中是否有重复出现的模式？（如 CRUD 模板、API 调用模式）
-- [ ] 是否有踩坑可以抽象为通用解决方案？
-- [ ] 当前流程是否有卡点可以优化？
-- [ ] 是否有可抽取为 Skill 的通用能力？
-
-**反思输出格式**:
-```markdown
-## Skill 建议
-
-### 可沉淀为 Skill 的模式
-- [ ] 场景: "当遇到 xxx 时" → 建议创建 "xxx-skill"
-- [ ] ...
-
-### 建议优化
-- [ ] 流程优化: ...
-- [ ] 文档补充: ...
-```
-
-如有可沉淀的 Skill，AI 主动提示用户：
-```
-💡 发现可复用模式：xxx，建议创建 Skill？
-操作：使用 create-skill skill 创建
-```
-
-## 快速通道
-
-对于**简单需求**（已冻结契约、熟悉技术栈）可跳过 Gate B/C：
+每个对话响应开头输出当前 FSM 状态：
 
 ```
-新需求：实现 xxx 表 CRUD（契约已冻结）
-↓
-Gate D 直接启动流水线
-↓
-Gate E 验收
-↓
-Gate F 沉淀
+[FSM: REQUIREMENT → 等待用户确认范围]
+[FSM: DESIGN → 等待用户冻结契约]
+[FSM: LEARNING → 等待用户确认已学习]
+[FSM: CODING → 编码推进中]
+[FSM: GUARD_CHECK → 门禁检查中]
+[FSM: AUTO_FIX → 自动修复中（第 N 轮）]
+[FSM: HARD_FAIL → 硬门禁失败，等待用户决策]
+[FSM: ACCEPTANCE → 等待用户验收]
+[FSM: SPEC_GAP → 分析完成，建议回退到 X]
+[FSM: WRAP_UP → 归档中]
+[FSM: WORKFLOW_REVIEW → 流程自检中]
 ```
+
+## 前置条件
+
+| 条件 | 检查方式 | 不通过时 |
+|------|---------|---------| 
+| `stage-plan.md` 存在且有当前阶段标记 | 读取文件，搜索 `## 当前阶段：` | 提示用户确认当前阶段 |
+| 当前阶段的 Gate 状态可读 | 读取对应段落的 checkbox | 提示文件可能损坏 |
+| 契约文件存在（进入 CODING 前） | 读取 api-contract.md + schema.md | 阻断编码，提示先完成 DESIGN |
+
+## 各状态行为
+
+### REQUIREMENT
+- **触发词**："新需求"、"开始阶段 X"、"开启下一阶段"
+- **进入前置检查**：
+  1. 读取 stage-plan.md 找到当前阶段
+  2. 检查当前阶段 Gate E/F 是否全通
+  3. **如果 Gate F 未全通，阻断进入**，输出未完成项，提示用户先完成当前阶段
+  4. 只有 Gate F 全通后，才允许进入下一阶段的 REQUIREMENT
+- **进入**：Gate F 全通 → 读取/起草下一阶段定义
+- **离开**：用户回复"确认"
+- **话术**：见 `references/state-scripts.md`
+
+### DESIGN
+- **进入**：REQUIREMENT 确认后
+- **离开**：文件有冻结标记 + 用户说"确认冻结"
+- **话术**：见 `references/state-scripts.md`
+
+### LEARNING
+- **进入**：DESIGN 冻结后
+- **离开**：用户说"了解了"或"继续"
+- **AI 不代勾 Gate C**
+
+### CODING
+- **进入**：DESIGN 已冻结 + LEARNING 已确认
+- **行为**：先 `go build ./...` 确认基线，按小闭环推进
+- **离开**：代码写完自动进入 GUARD_CHECK
+- **节奏**：一次对话最多推进 2 个 Day
+
+#### 并行开发（契约冻结后自动启用）
+Gate A/B 契约冻结后，**必须**使用 subagent 并行开发：
+- `go-api-implementer` — 后端 API 实现
+- `frontend-engineer` — 前端页面实现
+
+两个 subagent 在同一条消息中并行启动。AI 不应串行等待后端完成再启动前端。
+
+**Subagent 交接清单**：subagent 可能遗漏全局注册（router.go、layout.tsx menu），主 agent 合并时必须检查并补齐。
+
+#### 数据库命令直接执行
+migration SQL 和 seed SQL 由 AI 直接执行，不输出让用户手动跑：
+```bash
+mysql -u root personal_profile --default-character-set=utf8mb4 < backend/migrations/xxxx.sql
+mysql -u root personal_profile --default-character-set=utf8mb4 < backend/migrations/seed_xxxx.sql
+```
+注意：始终使用 `--default-character-set=utf8mb4` 避免中文乱码。
+
+#### 验收前预检（避免常见踩坑）
+Gate E 浏览器验收前，AI 自动执行：
+1. **Next.js 缓存清理**：`rm -rf .next && npm run dev` — 避免 middleware module not found
+2. **端口占用检查**：`lsof -ti:8080 | xargs kill -9` — 后端端口冲突
+3. **数据库中文验证**：curl 一个返回中文的接口，确认无乱码后再让用户验收
+
+### GUARD_CHECK → AUTO_FIX → HARD_FAIL
+详见 `references/guard-gates.md`。
+
+### ACCEPTANCE
+- **进入**：门禁全部通过
+- **离开**："通过" → WRAP_UP；"不对" → SPEC_GAP
+- **快路径**：拼写/文案/样式微调直接修，不走 spec-gap
+
+### SPEC_GAP
+详见 `references/spec-gap.md`。
+
+### WRAP_UP
+- **行为**：更新 progress-log.md，协助起草 pitfalls.md，提醒挪动游标
+- **离开**：用户确认完成 → WORKFLOW_REVIEW
+
+### WORKFLOW_REVIEW
+- **进入**：WRAP_UP 完成后自动进入
+- **行为**：自检本次流程执行中的问题
+- **检查项**：
+  - 状态转换是否有卡顿（同一状态停留 >3 轮对话）
+  - spec-gap 回退是否频繁（同一阶段回退 >2 次）
+  - 门禁失败模式是否重复（相同错误类型 >2 次）
+  - 用户是否多次要求跳过某环节
+- **发现问题时**：直接修改流程定义，记录变更理由
+- **无问题时**：静默结束
+- **详见** `references/workflow-review.md`
 
 ## 状态查询
 
-**触发词**: "状态"、"阶段进度"、"harness check"
+**触发词**："状态"、"阶段进度"
 
-**输出**:
-```markdown
-## 当前状态
+详见 `references/status-query-format.md`。
 
-### Stage X: [阶段名称]
-- Gate A: ✅ 已完成
-- Gate B: ✅ 已冻结（api-contract.md / schema.md）
-- Gate C: ✅ 已学习
-- Gate D: ⏳ 进行中（流水线阶段 3/6）
-- Gate E: ⏳ 待验收
-- Gate F: ⏳ 待沉淀
+## 阶段游标管理
 
-### 流水线状态
-- 活跃需求: REQ-XXX
-- 当前阶段: fe_impl_done
-- 下一步: 调用 test-case-designer
-```
+AI 的职责是提醒，不主动挪动。详见 `references/stage-cursor.md`。
 
-## 异常处理
+## 快速通道
 
-### 流水线测试失败
-1. 状态回退到对应实现阶段
-2. 输出失败原因 + 修复建议
-3. 用户修复后输入"重试测试"继续
+当契约已冻结且用户说"走快速通道"时，跳过 LEARNING 直接进入 CODING。
 
-### 契约变更需求
-1. 暂停流水线
-2. 回到 Gate B 重新冻结契约
-3. 继续流水线
+## 错误处理
 
-## 输出格式
+详见 `references/error-handling.md`。
 
-### 阶段完成摘要
-```markdown
-## 阶段完成
+## 示例
 
-- **需求**: REQ-XXX
-- **Gate 状态**: A ✅ B ✅ C ✅ D ✅ E ✅ F ✅
-- **代码变更**: [文件列表]
-- **测试结果**: X/Y 通过
-- **产出物**: [PRD.md / api-summary.md / test-report.md]
-- **下一步**: 进入 Stage X 或完成
-```
+详见 `references/example-scenarios.md`。
 
-## 与现有体系的关系
+## 与 AGENTS.md 的关系
 
-- 兼容 `docs/dev-harness/stage-plan.md` 的阶段定义
-- 兼容 `docs/dev-harness/progress-log.md` 的进度追踪
-- 兼容 `docs/dev-harness/pitfalls.md` 的踩坑记录
-- 流水线产出物统一归档到 `.comate/pipeline/requirements/`
+- AGENTS.md = 硬性规则
+- 本 Skill = FSM 驱动的对话行为
+- AGENTS.md 的 Gate 勾选权规则在本 FSM 中体现为：只有用户能触发状态离开
+
+## 变更记录
+
+| 版本 | 日期 | 内容 |
+|------|------|------|
+| v3.4.0 | 2026-06-04 | REQUIREMENT 进入前置检查：Gate F 未全通时阻断，防止跳过阶段 |
+| v3.3.0 | 2026-06-04 | CODING 阶段新增：契约冻结后自动并行 subagent 开发 + MySQL 命令直接执行 |
+| v3.2.0 | 2026-06-04 | 新增 WORKFLOW_REVIEW 自动阶段，允许 AI 自检并修改流程定义 |
+| v3.1.0 | 2026-06-04 | 拆分 references：话术、示例、错误处理独立文件 |
+| v3.0.0 | 2026-06-04 | FSM 重构：状态机驱动 + 用户确认推进 + 软硬门禁分离 + spec-gap 回退 |
+| v2.1.0 | 2026-06-04 | 补全 5 个缺口：状态查询、游标管理、状态收敛、快速通道、踩坑触发 |
+| v2.0.0 | 2026-06-04 | 从模板驱动改为意图驱动 |
+| v1.0.0 | 2026-05 | 初版（过度承诺自动化） |

@@ -14,6 +14,7 @@ class Settings(BaseSettings):
 
     # Database
     database_url: str = "mysql+pymysql://pp_app:pp_dev_pwd@localhost:3306/personal_profile"
+    agent_db_dsn: str = "mysql+pymysql://pp_app:pp_dev_pwd@127.0.0.1:3306/personal_profile?charset=utf8mb4"
 
     # LangGraph Checkpoint
     checkpoint_db: str = "sqlite:///checkpoints/checkpoints.db"

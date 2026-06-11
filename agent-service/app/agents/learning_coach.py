@@ -1,20 +1,22 @@
 """Learning Coach Agent - LangGraph Implementation."""
 
 from typing import TypedDict, Annotated, Sequence
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, SystemMessage, ToolMessage
 from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
+from langgraph.graph.message import add_messages
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import ToolNode
 
 from app.config import get_settings
+from app.tools.learning import ALL_TOOLS
 
 settings = get_settings()
 
 
 class AgentState(TypedDict):
     """Agent state for LangGraph."""
-    messages: Annotated[Sequence[BaseMessage], "The messages in the conversation"]
+    messages: Annotated[list[BaseMessage], add_messages]
     owner_id: int
 
 
@@ -45,33 +47,42 @@ SYSTEM_PROMPT = """你是一位专业的学习教练，帮助用户制定和执�
 
 ## 工具使用
 在需要时调用工具获取或更新数据，不要凭记忆回答关于用户数据的问题。
+当用户询问学习情况、画像、目标时，先调用对应工具获取真实数据再回答。
 """
 
 
 def create_agent():
     """Create the Learning Coach Agent graph."""
-    llm = get_llm()
+    llm = get_llm().bind_tools(ALL_TOOLS)
 
     # Define nodes
     def agent_node(state: AgentState):
         """Main agent reasoning node."""
         messages = state["messages"]
-        # Add system prompt
         full_messages = [SystemMessage(content=SYSTEM_PROMPT)] + list(messages)
         response = llm.invoke(full_messages)
-        return {"messages": messages + [response]}
+        return {"messages": [response]}
+
+    def should_continue(state: AgentState):
+        """Check if agent wants to call tools."""
+        last_message = state["messages"][-1]
+        if hasattr(last_message, "tool_calls") and last_message.tool_calls:
+            return "tools"
+        return END
 
     # Build graph
     workflow = StateGraph(AgentState)
 
     # Add nodes
     workflow.add_node("agent", agent_node)
+    workflow.add_node("tools", ToolNode(ALL_TOOLS))
 
     # Set entry point
     workflow.set_entry_point("agent")
 
-    # Add edge to end (simple flow for MVP)
-    workflow.add_edge("agent", END)
+    # Conditional edge: call tools or end
+    workflow.add_conditional_edges("agent", should_continue, {"tools": "tools", END: END})
+    workflow.add_edge("tools", "agent")
 
     # Compile with memory checkpoint
     checkpointer = MemorySaver()

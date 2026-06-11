@@ -93,6 +93,14 @@ func Setup(r *gin.Engine, db *gorm.DB) {
 	learningGoalRepo := repository.NewLearningGoalRepo(db)
 	learningGoalHandler := handler.NewLearningGoalHandler(learningGoalRepo)
 
+	// Stage 8 学习计划
+	learningPlanRepo := repository.NewLearningPlanRepo(db)
+	learningTaskRepo := repository.NewLearningTaskRepo(db)
+	learningProgressRepo := repository.NewLearningProgressRepo(db)
+	learningPlanHandler := handler.NewLearningPlanHandler(
+		learningPlanRepo, learningTaskRepo, learningProgressRepo, learningGoalRepo, learningProfileRepo,
+	)
+
 	privateGroup := api.Group("/private")
 	privateGroup.Use(middleware.Auth(), middleware.RequireOwnerRole())
 	privateGroup.GET("/learning/profile", learningProfileHandler.GetLearningProfile)
@@ -101,4 +109,17 @@ func Setup(r *gin.Engine, db *gorm.DB) {
 	privateGroup.POST("/learning/goals", learningGoalHandler.CreateLearningGoal)
 	privateGroup.PUT("/learning/goals/:id", learningGoalHandler.UpdateLearningGoal)
 	privateGroup.DELETE("/learning/goals/:id", learningGoalHandler.DeleteLearningGoal)
+
+	// FB-6 学习计划路由
+	privateGroup.GET("/learning/plans", learningPlanHandler.GetPlans)
+	privateGroup.POST("/learning/plans", learningPlanHandler.CreatePlan)
+	privateGroup.PUT("/learning/plans/:id", learningPlanHandler.UpdatePlan)
+	privateGroup.DELETE("/learning/plans/:id", learningPlanHandler.DeletePlan)
+	privateGroup.POST("/learning/plans/generate", learningPlanHandler.GeneratePlan)
+	privateGroup.GET("/learning/plans/:planId/tasks", learningPlanHandler.GetTasks)
+	privateGroup.POST("/learning/plans/:planId/tasks", learningPlanHandler.CreateTask)
+	privateGroup.PUT("/learning/tasks/:id", learningPlanHandler.UpdateTask)
+	privateGroup.DELETE("/learning/tasks/:id", learningPlanHandler.DeleteTask)
+	privateGroup.GET("/learning/tasks/:taskId/progress", learningPlanHandler.GetProgress)
+	privateGroup.POST("/learning/tasks/:taskId/progress", learningPlanHandler.CreateProgress)
 }
