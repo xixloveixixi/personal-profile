@@ -1,4 +1,5 @@
-import { hybridSearch } from '@/lib/ai/hybrid-search'
+import { searchPublicKnowledge } from '@/lib/ai/public-knowledge'
+import { retrieveAnswerContext, shouldSkipKeywordFallback } from '@/lib/ai/retrieval'
 
 export async function POST(req: Request) {
   try {
@@ -10,17 +11,37 @@ export async function POST(req: Request) {
 
     const userMessage = messages[messages.length - 1].content
 
-    // 1. 搜索相关知识
+    // 1. 优先使用 Multi Query + RAG-Fusion 检索动态公开知识向量；失败或无结果时回退到实时公开数据关键词检索
     let context = ''
+    let sources: Array<{ type: string; id: string; title: string; source?: string; score: number }> = []
+    let skipFallback = false
     try {
-      const similarChunks = await hybridSearch(userMessage, 3)
-      if (similarChunks.length > 0) {
-        context = similarChunks
-          .map((chunk) => `[来源: ${chunk.metadata.title || chunk.metadata.type}]\n${chunk.content}`)
-          .join('\n\n---\n\n')
-      }
+      const retrieval = await retrieveAnswerContext(userMessage, { limit: 5 })
+      context = retrieval.context
+      sources = retrieval.sources
+      skipFallback = shouldSkipKeywordFallback(retrieval.debug.blockReason)
     } catch (error) {
-      console.error('Knowledge search error:', error)
+      console.error('Public vector search error:', error)
+    }
+
+    if (!context && !skipFallback) {
+      try {
+        const similarChunks = await searchPublicKnowledge(userMessage, 5)
+        if (similarChunks.length > 0) {
+          context = similarChunks
+            .map((chunk) => `[来源: ${chunk.title}]\n${chunk.content}`)
+            .join('\n\n---\n\n')
+          sources = similarChunks.map((chunk) => ({
+            type: chunk.type,
+            id: chunk.id,
+            title: chunk.title,
+            source: chunk.source,
+            score: chunk.score,
+          }))
+        }
+      } catch (error) {
+        console.error('Public knowledge search error:', error)
+      }
     }
 
     // 2. 构建系统提示词
@@ -93,7 +114,7 @@ ${context ? `背景信息（这是唯一的信息来源，请严格遵循，一�
     const content = data.choices?.[0]?.message?.content || ''
     
     return new Response(
-      JSON.stringify({ content }), 
+      JSON.stringify({ content, sources }), 
       { headers: { 'Content-Type': 'application/json' } }
     )
     

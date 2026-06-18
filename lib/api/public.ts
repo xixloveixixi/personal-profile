@@ -36,6 +36,21 @@ export interface SiteConfigItem {
   description: string
 }
 
+export interface PublicTimelineEntry {
+  id: number
+  entryId: string
+  type: 'education' | 'work'
+  title: string
+  organization: string
+  location: string
+  startDate: string
+  endDate: string | null
+  description: string
+  achievements: string[]
+  technologies: string[]
+  sortOrder: number
+}
+
 export function getPublicProfile(): Promise<PublicProfile> {
   return apiFetch<PublicProfile>('/api/public/profile', {
     cache: 'no-store',
@@ -60,6 +75,12 @@ export function getSiteConfig(): Promise<SiteConfigItem[]> {
   })
 }
 
+export function getPublicTimeline(): Promise<PublicTimelineEntry[]> {
+  return apiFetch<PublicTimelineEntry[]>('/api/public/about/timeline', {
+    cache: 'no-store',
+  })
+}
+
 // --- portfolio project ---
 
 export interface PublicProject {
@@ -67,6 +88,11 @@ export interface PublicProject {
   slug: string
   title: string
   shortDescription: string
+  longDescription: string
+  problem: string
+  solution: string
+  challenges: string
+  results: string
   technologies: string[]
   githubUrl: string
   demoUrl: string
@@ -77,13 +103,7 @@ export interface PublicProject {
   sortOrder: number
 }
 
-export interface PublicProjectDetail extends PublicProject {
-  longDescription: string
-  problem: string
-  solution: string
-  challenges: string
-  results: string
-}
+export type PublicProjectDetail = PublicProject
 
 export function getPublicProjects(): Promise<PublicProject[]> {
   return apiFetch<PublicProject[]>('/api/public/projects', {

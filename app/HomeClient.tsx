@@ -5,11 +5,16 @@ import { iconMap } from '@/components/icons/SocialIcons'
 import { Typography, Space, Tag, Tooltip } from 'antd'
 import LightRays from '@/components/background/LightRays'
 import ChatWindow from '@/components/chat/ChatWindow'
-import type { PublicContact } from '@/lib/api/public'
+import type { PublicContact, PublicProfile } from '@/lib/api/public'
 
 const { Title, Paragraph, Text } = Typography
 
-export default function HomeClient({ contacts }: { contacts: PublicContact[] }) {
+interface HomeClientProps {
+  contacts: PublicContact[]
+  profile: PublicProfile | null
+}
+
+export default function HomeClient({ contacts, profile }: HomeClientProps) {
   return (
     <div className="relative h-[100vh] w-[100%] flex flex-col">
       {/* React Bits 光线效果背景 - 仅在首页显示 */}
@@ -39,17 +44,17 @@ export default function HomeClient({ contacts }: { contacts: PublicContact[] }) 
             level={1}
             className="!text-4xl md:!text-4xl lg:!text-4xl !font-bold !mb-4 !text-white"
           >
-            Hi，我是阿菥
+            {profile?.displayName ? `Hi，我是${profile.displayName}` : 'Hi，我是阿菥'}
           </Title>
 
           {/* 角色描述 */}
           <Space direction="vertical" size="middle" className="mb-8 w-full">
             <Paragraph className="!text-lg md:!text-xl !text-gray-200 !mb-0">
-              ISFJ ｜ 逛公园爱好者 ｜ 喜欢旅游 ｜ 爱追综艺 ｜ 享受生活
+              {profile?.currentFocus || 'ISFJ ｜ 逛公园爱好者 ｜ 喜欢旅游 ｜ 爱追综艺 ｜ 享受生活'}
             </Paragraph>
 
             <Text className="!text-base md:!text-lg !text-gray-300">
-              正在努力成为前端Agent工程师！！！
+              {profile?.headline || '正在努力成为AI应用研发工程师！！！'}
             </Text>
           </Space>
         </div>

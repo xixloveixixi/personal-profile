@@ -1,4 +1,39 @@
 import { adminFetch } from './admin'
+import { ApiError } from './client'
+import { readAdminAuthCookie, useAuthStore } from '../stores/auth'
+
+const AGENT_BASE = process.env.NEXT_PUBLIC_AGENT_SERVICE_URL ?? 'http://localhost:8000'
+
+function getAgentToken() {
+  return useAuthStore.getState().token || readAdminAuthCookie() || ''
+}
+
+async function agentFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = getAgentToken()
+  const response = await fetch(`${AGENT_BASE}${path}`, {
+    ...init,
+    headers: {
+      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(init?.headers ?? {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    cache: init?.cache ?? 'no-store',
+  })
+
+  const contentType = response.headers.get('content-type') ?? ''
+  const payload = contentType.includes('application/json') ? await response.json() : null
+
+  if (!response.ok) {
+    const message =
+      (payload && typeof payload.detail === 'string' && payload.detail) ||
+      (payload && typeof payload.message === 'string' && payload.message) ||
+      `HTTP ${response.status}`
+
+    throw new ApiError(response.status, message)
+  }
+
+  return payload as T
+}
 
 export interface LearningProfile {
   id: number
@@ -59,8 +94,6 @@ export function deleteLearningGoal(id: number): Promise<{ id: number }> {
     method: 'DELETE',
   })
 }
-
-// ========== Learning Plan APIs ==========
 
 export interface LearningPlan {
   id: number
@@ -184,4 +217,58 @@ export function logTaskProgress(taskId: number, data: { minutesSpent: number; no
     method: 'POST',
     body: JSON.stringify(data),
   })
+}
+
+export interface AgentConversation {
+  id: number
+  title: string
+  status: string
+  createdAt: string
+  updatedAt: string
+}
+
+export interface AgentHistoryMessage {
+  id: number
+  role: 'user' | 'assistant' | 'system' | 'tool'
+  content: string
+  toolCalls?: Array<Record<string, unknown>> | null
+  createdAt: string
+}
+
+export interface AgentHistoryResponse {
+  messages: AgentHistoryMessage[]
+  hasMore?: boolean
+  nextBeforeId?: number | null
+}
+
+export function getAgentConversations(): Promise<AgentConversation[]> {
+  return adminFetch<AgentConversation[]>('/api/private/agent/conversations', {
+    cache: 'no-store',
+  })
+}
+
+export function deleteAgentConversation(id: number): Promise<{ id: number }> {
+  return adminFetch<{ id: number }>(`/api/private/agent/conversations/${id}`, {
+    method: 'DELETE',
+  })
+}
+
+export function getAgentConversationHistory(
+  conversationId: number,
+  params?: { limit?: number; beforeId?: number | null },
+): Promise<AgentHistoryResponse> {
+  const search = new URLSearchParams()
+
+  if (params?.limit) {
+    search.set('limit', String(params.limit))
+  }
+
+  if (params?.beforeId) {
+    search.set('before_id', String(params.beforeId))
+  }
+
+  const query = search.toString()
+  return agentFetch<AgentHistoryResponse>(
+    `/api/chat/history/${conversationId}${query ? `?${query}` : ''}`,
+  )
 }

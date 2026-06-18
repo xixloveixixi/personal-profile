@@ -40,7 +40,7 @@ export default function LearningDashboardPage() {
   ]
 
   return (
-    <main className="min-h-screen bg-slate-50 p-6">
+    <main className="min-h-screen bg-slate-50 p-6 overflow:hidden">
       {contextHolder}
       <Card
         title="学习画像概览"

@@ -276,6 +276,86 @@
 - **关联表**：`site_config`。
 - **备注**：按 `config_key` 唯一索引 upsert。
 
+#### GET /api/public/about/timeline
+
+- **作用**：获取公开时间线列表（教育 / 工作 / 项目经历）。
+- **鉴权**：公开。
+- **请求参数**：无。
+- **成功响应 data**：
+  ```json
+  [
+    {
+      "id": 1,
+      "entryId": "education-hnust",
+      "type": "education",
+      "title": "本科",
+      "organization": "湖南科技大学",
+      "location": "湖南湘潭",
+      "startDate": "2021-09-01",
+      "endDate": "2027-06-30",
+      "description": "数据科学与大数据技术专业...",
+      "achievements": ["系统学习计算机基础课程"],
+      "technologies": ["数据科学", "大数据技术"],
+      "sortOrder": 0
+    }
+  ]
+  ```
+- **错误码**：`50000` DB 异常。
+- **关联表**：`about_timeline`。
+- **备注**：仅返回 `is_public=1`；按 `sort_order ASC, id ASC` 排序；`achievements` / `technologies` 返回数组。
+
+#### GET /api/admin/about/timeline
+
+- **作用**：获取时间线列表（含非公开项）。
+- **鉴权**：Bearer Token。
+- **请求参数**：无。
+- **成功响应 data**：数组，结构在 public 基础上额外含 `isPublic`。
+- **错误码**：`40100` 未登录；`50000` DB 异常。
+- **关联表**：`about_timeline`。
+- **备注**：按 `sort_order ASC, id ASC` 全量返回。
+
+#### POST /api/admin/about/timeline
+
+- **作用**：新增时间线条目。
+- **鉴权**：Bearer Token。
+- **请求参数**：JSON Body
+  | 字段 | 类型 | 必填 | 说明 |
+  |------|------|------|------|
+  | entryId       | string   | 是 | 业务标识，<=128 字 |
+  | type          | string   | 是 | `education` / `work` |
+  | title         | string   | 是 | <=128 字 |
+  | organization  | string   | 是 | <=128 字 |
+  | location      | string   | 否 | <=128 字 |
+  | startDate     | string   | 是 | `YYYY-MM-DD` |
+  | endDate       | string   | 否 | `YYYY-MM-DD`，可空 |
+  | description   | string   | 否 | <=5000 字 |
+  | achievements  | string[] | 否 | 默认 `[]` |
+  | technologies  | string[] | 否 | 默认 `[]` |
+  | isPublic      | bool     | 否 | 默认 true |
+  | sortOrder     | int      | 否 | 默认 0 |
+- **成功响应 data**：新增后的完整 timeline 对象。
+- **错误码**：`40001` 校验失败；`40100` 未登录；`50000` DB 异常。
+- **关联表**：`about_timeline`。
+
+#### PUT /api/admin/about/timeline/:id
+
+- **作用**：更新时间线条目。
+- **鉴权**：Bearer Token。
+- **请求参数**：path `id`；body 字段同 POST，全部可选。
+- **成功响应 data**：更新后的完整 timeline 对象。
+- **错误码**：`40001` 校验失败；`40100` 未登录；`40400` 资源不存在；`50000` DB 异常。
+- **关联表**：`about_timeline`。
+
+#### DELETE /api/admin/about/timeline/:id
+
+- **作用**：删除时间线条目（软删）。
+- **鉴权**：Bearer Token。
+- **请求参数**：path `id`。
+- **成功响应 data**：`{ "id": 1 }`。
+- **错误码**：`40100` 未登录；`40400` 资源不存在；`50000` DB 异常。
+- **关联表**：`about_timeline`。
+- **备注**：GORM 软删，写入 `deleted_at`。
+
 ## 待冻结接口（Stage 3 / FB-3）
 
 > 状态：✅ 已冻结于 2026-06-02。

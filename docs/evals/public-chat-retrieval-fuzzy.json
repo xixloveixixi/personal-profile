@@ -1,0 +1,501 @@
+[
+  {
+    "id": "profile_fuzzy_001",
+    "query": "这个人是干嘛的",
+    "intent": "profile",
+    "expectedTypes": ["profile"],
+    "expectedTitlesAny": ["公开个人信息"],
+    "expectedKeywordsAny": ["姓名", "标题", "简介", "当前关注"],
+    "notes": "口语化个人介绍，应命中公开个人信息。"
+  },
+  {
+    "id": "profile_fuzzy_002",
+    "query": "她现在主要关注什么方向",
+    "intent": "profile",
+    "expectedTypes": ["profile"],
+    "expectedTitlesAny": ["公开个人信息"],
+    "expectedKeywordsAny": ["当前关注", "标题", "简介"],
+    "notes": "当前定位问法，应优先命中 profile。"
+  },
+  {
+    "id": "profile_fuzzy_003",
+    "query": "简单介绍下阿菥",
+    "intent": "profile",
+    "expectedTypes": ["profile"],
+    "expectedTitlesAny": ["公开个人信息"],
+    "expectedKeywordsAny": ["姓名", "简介", "标题"],
+    "notes": "简介类问题。"
+  },
+  {
+    "id": "profile_fuzzy_004",
+    "query": "她在哪里",
+    "intent": "profile",
+    "expectedTypes": ["profile"],
+    "expectedTitlesAny": ["公开个人信息"],
+    "expectedKeywordsAny": ["所在地"],
+    "notes": "短指代问题，期望命中所在地。"
+  },
+  {
+    "id": "profile_fuzzy_005",
+    "query": "主页上的个人定位是什么",
+    "intent": "profile",
+    "expectedTypes": ["profile"],
+    "expectedTitlesAny": ["公开个人信息"],
+    "expectedKeywordsAny": ["标题", "当前关注"],
+    "notes": "定位问法。"
+  },
+  {
+    "id": "profile_fuzzy_006",
+    "query": "这位同学的背景大概是什么",
+    "intent": "profile",
+    "expectedTypes": ["profile", "timeline"],
+    "expectedTitlesAny": ["公开个人信息", "教育经历"],
+    "expectedKeywordsAny": ["简介", "教育经历", "组织"],
+    "notes": "背景可能落到 profile 或教育经历。"
+  },
+  {
+    "id": "profile_fuzzy_007",
+    "query": "她的城市和个人简介",
+    "intent": "profile",
+    "expectedTypes": ["profile"],
+    "expectedTitlesAny": ["公开个人信息"],
+    "expectedKeywordsAny": ["所在地", "简介"],
+    "notes": "多字段 profile 查询。"
+  },
+  {
+    "id": "profile_fuzzy_008",
+    "query": "小菥是谁",
+    "intent": "profile",
+    "expectedTypes": ["profile"],
+    "expectedTitlesAny": ["公开个人信息"],
+    "expectedKeywordsAny": ["姓名", "简介", "标题"],
+    "notes": "昵称式问法。"
+  },
+  {
+    "id": "contact_fuzzy_001",
+    "query": "怎么联系她",
+    "intent": "contact",
+    "expectedTypes": ["contact"],
+    "expectedTitlesAny": ["公开联系方式"],
+    "expectedKeywordsAny": ["公开联系方式", "github", "email", "邮箱"],
+    "disallowedTypes": ["skill"],
+    "notes": "联系方式基础问法。"
+  },
+  {
+    "id": "contact_fuzzy_002",
+    "query": "有 GitHub 吗",
+    "intent": "contact",
+    "expectedTypes": ["contact"],
+    "expectedTitlesAny": ["公开联系方式"],
+    "expectedKeywordsAny": ["GitHub", "github"],
+    "disallowedTypes": ["skill"],
+    "notes": "GitHub 联系入口。"
+  },
+  {
+    "id": "contact_fuzzy_003",
+    "query": "想找她聊聊去哪找",
+    "intent": "contact",
+    "expectedTypes": ["contact"],
+    "expectedTitlesAny": ["公开联系方式"],
+    "expectedKeywordsAny": ["公开联系方式", "邮箱", "email", "github"],
+    "disallowedTypes": ["project"],
+    "notes": "隐式联系意图。"
+  },
+  {
+    "id": "contact_fuzzy_004",
+    "query": "邮箱给我一下",
+    "intent": "contact",
+    "expectedTypes": ["contact"],
+    "expectedTitlesAny": ["公开联系方式"],
+    "expectedKeywordsAny": ["邮箱", "email", "@"],
+    "notes": "邮箱口语问法。"
+  },
+  {
+    "id": "contact_fuzzy_005",
+    "query": "她在哪些平台能看到",
+    "intent": "contact",
+    "expectedTypes": ["contact"],
+    "expectedTitlesAny": ["公开联系方式"],
+    "expectedKeywordsAny": ["公开联系方式", "github", "掘金", "csdn"],
+    "notes": "平台问法。"
+  },
+  {
+    "id": "contact_fuzzy_006",
+    "query": "社交账号有吗",
+    "intent": "contact",
+    "expectedTypes": ["contact"],
+    "expectedTitlesAny": ["公开联系方式"],
+    "expectedKeywordsAny": ["公开联系方式", "GitHub", "github"],
+    "notes": "社交账号同义表达。"
+  },
+  {
+    "id": "contact_fuzzy_007",
+    "query": "联系方式和主页链接",
+    "intent": "contact",
+    "expectedTypes": ["contact"],
+    "expectedTitlesAny": ["公开联系方式"],
+    "expectedKeywordsAny": ["公开联系方式", "http", "github"],
+    "notes": "联系 + 链接。"
+  },
+  {
+    "id": "contact_fuzzy_008",
+    "query": "能发一下她的联系方式吗",
+    "intent": "contact",
+    "expectedTypes": ["contact"],
+    "expectedTitlesAny": ["公开联系方式"],
+    "expectedKeywordsAny": ["公开联系方式", "邮箱", "github"],
+    "notes": "自然语言请求。"
+  },
+  {
+    "id": "skill_fuzzy_001",
+    "query": "她前端怎么样",
+    "intent": "skill",
+    "expectedTypes": ["skill"],
+    "expectedTitlesAny": ["技能总览", "技能分类", "技能："],
+    "expectedKeywordsAny": ["React", "TypeScript", "Next.js", "前端"],
+    "notes": "模糊技能能力问法。"
+  },
+  {
+    "id": "skill_fuzzy_002",
+    "query": "主要会哪些技术",
+    "intent": "skill",
+    "expectedTypes": ["skill"],
+    "expectedTitlesAny": ["技能总览", "技能分类"],
+    "expectedKeywordsAny": ["技能总览", "React", "TypeScript"],
+    "notes": "技能总览。"
+  },
+  {
+    "id": "skill_fuzzy_003",
+    "query": "React 她会吗",
+    "intent": "skill",
+    "expectedTypes": ["skill"],
+    "expectedTitlesAny": ["React", "技能"],
+    "expectedKeywordsAny": ["React"],
+    "notes": "具体技术技能查询。"
+  },
+  {
+    "id": "skill_fuzzy_004",
+    "query": "她技术栈是什么",
+    "intent": "skill",
+    "expectedTypes": ["skill"],
+    "expectedTitlesAny": ["技能总览", "技能分类"],
+    "expectedKeywordsAny": ["技能总览", "技术", "React", "TypeScript"],
+    "notes": "技术栈总览。"
+  },
+  {
+    "id": "skill_fuzzy_005",
+    "query": "有没有 AI 相关能力",
+    "intent": "skill",
+    "expectedTypes": ["skill", "project"],
+    "expectedTitlesAny": ["AI", "技能", "项目"],
+    "expectedKeywordsAny": ["AI", "Agent", "MCP"],
+    "notes": "AI 可能来自技能或项目。"
+  },
+  {
+    "id": "skill_fuzzy_006",
+    "query": "她用 TypeScript 多吗",
+    "intent": "skill",
+    "expectedTypes": ["skill", "project"],
+    "expectedTitlesAny": ["TypeScript", "技能", "项目"],
+    "expectedKeywordsAny": ["TypeScript"],
+    "notes": "具体技术可命中技能或项目。"
+  },
+  {
+    "id": "skill_fuzzy_007",
+    "query": "掌握什么框架",
+    "intent": "skill",
+    "expectedTypes": ["skill"],
+    "expectedTitlesAny": ["技能总览", "技能分类"],
+    "expectedKeywordsAny": ["React", "Next.js", "Vue"],
+    "notes": "框架同义表达。"
+  },
+  {
+    "id": "skill_fuzzy_008",
+    "query": "后端她会一点吗",
+    "intent": "skill",
+    "expectedTypes": ["skill", "project"],
+    "expectedTitlesAny": ["Go", "后端", "技能", "项目"],
+    "expectedKeywordsAny": ["Go", "后端", "Gin"],
+    "notes": "后端能力可能来自技能或项目。"
+  },
+  {
+    "id": "skill_fuzzy_009",
+    "query": "工程化能力有什么体现",
+    "intent": "skill",
+    "expectedTypes": ["skill", "project"],
+    "expectedTitlesAny": ["技能", "项目"],
+    "expectedKeywordsAny": ["工程化", "性能", "TypeScript", "Next.js"],
+    "notes": "抽象能力问法。"
+  },
+  {
+    "id": "skill_fuzzy_010",
+    "query": "她熟悉 Next 吗",
+    "intent": "skill",
+    "expectedTypes": ["skill", "project"],
+    "expectedTitlesAny": ["Next", "技能", "项目"],
+    "expectedKeywordsAny": ["Next.js", "Next"],
+    "notes": "简称技术名。"
+  },
+  {
+    "id": "project_fuzzy_001",
+    "query": "有啥拿得出手的作品",
+    "intent": "project",
+    "expectedTypes": ["project"],
+    "expectedTitlesAny": ["项目经历", "项目"],
+    "expectedKeywordsAny": ["项目名称", "技术栈", "简介"],
+    "disallowedTypes": ["contact"],
+    "notes": "作品集口语问法。"
+  },
+  {
+    "id": "project_fuzzy_002",
+    "query": "她做过哪些项目",
+    "intent": "project",
+    "expectedTypes": ["project"],
+    "expectedTitlesAny": ["项目经历", "项目"],
+    "expectedKeywordsAny": ["项目名称", "技术栈"],
+    "notes": "项目总览。"
+  },
+  {
+    "id": "project_fuzzy_003",
+    "query": "有没有 React 相关项目",
+    "intent": "project",
+    "expectedTypes": ["project"],
+    "expectedTitlesAny": ["项目经历", "项目"],
+    "expectedKeywordsAny": ["React"],
+    "notes": "技术限定项目查询。"
+  },
+  {
+    "id": "project_fuzzy_004",
+    "query": "作品里哪个比较能展示前端能力",
+    "intent": "project",
+    "expectedTypes": ["project"],
+    "expectedTitlesAny": ["项目经历", "项目"],
+    "expectedKeywordsAny": ["项目名称", "技术栈", "前端"],
+    "notes": "价值判断式项目查询。"
+  },
+  {
+    "id": "project_fuzzy_005",
+    "query": "她写过组件库吗",
+    "intent": "project",
+    "expectedTypes": ["project"],
+    "expectedTitlesAny": ["项目经历", "项目"],
+    "expectedKeywordsAny": ["组件", "组件库", "React", "项目名称"],
+    "notes": "具体项目类型查询。"
+  },
+  {
+    "id": "project_fuzzy_006",
+    "query": "有没有管理后台这种项目",
+    "intent": "project",
+    "expectedTypes": ["project"],
+    "expectedTitlesAny": ["项目经历", "项目"],
+    "expectedKeywordsAny": ["后台", "管理", "项目名称"],
+    "notes": "项目形态查询。"
+  },
+  {
+    "id": "project_fuzzy_007",
+    "query": "她项目里用了哪些技术",
+    "intent": "project",
+    "expectedTypes": ["project"],
+    "expectedTitlesAny": ["项目经历", "项目"],
+    "expectedKeywordsAny": ["技术栈"],
+    "notes": "项目技术栈。"
+  },
+  {
+    "id": "project_fuzzy_008",
+    "query": "有什么可以点开看的 demo",
+    "intent": "project",
+    "expectedTypes": ["project"],
+    "expectedTitlesAny": ["项目经历", "项目"],
+    "expectedKeywordsAny": ["Demo", "demo", "项目名称", "GitHub"],
+    "notes": "Demo/作品链接意图。"
+  },
+  {
+    "id": "project_fuzzy_009",
+    "query": "项目成果怎么样",
+    "intent": "project",
+    "expectedTypes": ["project"],
+    "expectedTitlesAny": ["项目经历", "项目"],
+    "expectedKeywordsAny": ["成果", "项目名称"],
+    "notes": "项目成果。"
+  },
+  {
+    "id": "project_fuzzy_010",
+    "query": "她做过大屏项目吗",
+    "intent": "project",
+    "expectedTypes": ["project"],
+    "expectedTitlesAny": ["项目经历", "项目"],
+    "expectedKeywordsAny": ["大屏", "项目名称"],
+    "notes": "垂类项目查询。"
+  },
+  {
+    "id": "project_fuzzy_011",
+    "query": "介绍一下她的全栈项目",
+    "intent": "project",
+    "expectedTypes": ["project"],
+    "expectedTitlesAny": ["项目经历", "项目"],
+    "expectedKeywordsAny": ["Go", "Next.js", "MySQL", "项目名称"],
+    "notes": "全栈项目查询。"
+  },
+  {
+    "id": "project_fuzzy_012",
+    "query": "她做过 AI agent 相关作品吗",
+    "intent": "project",
+    "expectedTypes": ["project", "skill"],
+    "expectedTitlesAny": ["项目经历", "项目", "技能"],
+    "expectedKeywordsAny": ["AI", "Agent", "agent"],
+    "notes": "AI agent 项目或能力。"
+  },
+  {
+    "id": "timeline_fuzzy_001",
+    "query": "她之前在哪里实习过",
+    "intent": "timeline",
+    "expectedTypes": ["timeline"],
+    "expectedTitlesAny": ["工作经历", "实习"],
+    "expectedKeywordsAny": ["工作经历", "实习", "组织"],
+    "disallowedTypes": ["contact"],
+    "notes": "实习经历。"
+  },
+  {
+    "id": "timeline_fuzzy_002",
+    "query": "有没有工作经历",
+    "intent": "timeline",
+    "expectedTypes": ["timeline"],
+    "expectedTitlesAny": ["工作经历"],
+    "expectedKeywordsAny": ["工作经历", "组织", "时间"],
+    "notes": "工作经历总览。"
+  },
+  {
+    "id": "timeline_fuzzy_003",
+    "query": "学校是哪里",
+    "intent": "timeline",
+    "expectedTypes": ["timeline", "profile"],
+    "expectedTitlesAny": ["教育经历", "公开个人信息"],
+    "expectedKeywordsAny": ["教育经历", "大学", "学校", "组织"],
+    "notes": "教育经历。"
+  },
+  {
+    "id": "timeline_fuzzy_004",
+    "query": "她什么时候毕业",
+    "intent": "timeline",
+    "expectedTypes": ["timeline", "profile"],
+    "expectedTitlesAny": ["教育经历", "公开个人信息"],
+    "expectedKeywordsAny": ["教育经历", "时间", "毕业"],
+    "notes": "毕业时间可能在教育经历。"
+  },
+  {
+    "id": "timeline_fuzzy_005",
+    "query": "工作上做过什么事情",
+    "intent": "timeline",
+    "expectedTypes": ["timeline"],
+    "expectedTitlesAny": ["工作经历"],
+    "expectedKeywordsAny": ["工作经历", "描述", "成果"],
+    "notes": "工作内容。"
+  },
+  {
+    "id": "timeline_fuzzy_006",
+    "query": "她经历时间线给我看看",
+    "intent": "timeline",
+    "expectedTypes": ["timeline"],
+    "expectedTitlesAny": ["教育经历", "工作经历"],
+    "expectedKeywordsAny": ["时间", "经历"],
+    "notes": "时间线泛查询。"
+  },
+  {
+    "id": "timeline_fuzzy_007",
+    "query": "有没有公司经历",
+    "intent": "timeline",
+    "expectedTypes": ["timeline"],
+    "expectedTitlesAny": ["工作经历"],
+    "expectedKeywordsAny": ["工作经历", "组织"],
+    "notes": "公司经历同义表达。"
+  },
+  {
+    "id": "timeline_fuzzy_008",
+    "query": "她大学专业是什么",
+    "intent": "timeline",
+    "expectedTypes": ["timeline", "profile"],
+    "expectedTitlesAny": ["教育经历", "公开个人信息"],
+    "expectedKeywordsAny": ["专业", "教育经历", "大学"],
+    "notes": "专业信息。"
+  },
+  {
+    "id": "multi_fuzzy_001",
+    "query": "介绍下她的项目和技术栈",
+    "intent": "multi",
+    "expectedTypes": ["project", "skill"],
+    "expectedTitlesAny": ["项目经历", "技能总览", "技能分类"],
+    "expectedKeywordsAny": ["项目名称", "技术栈", "技能"],
+    "notes": "项目 + 技能多意图。"
+  },
+  {
+    "id": "multi_fuzzy_002",
+    "query": "实习和 React 项目都说一下",
+    "intent": "multi",
+    "expectedTypes": ["timeline", "project"],
+    "expectedTitlesAny": ["工作经历", "项目经历"],
+    "expectedKeywordsAny": ["实习", "React", "项目名称"],
+    "notes": "经历 + 项目多意图。"
+  },
+  {
+    "id": "multi_fuzzy_003",
+    "query": "怎么联系她，顺便看看她会什么",
+    "intent": "multi",
+    "expectedTypes": ["contact", "skill"],
+    "expectedTitlesAny": ["公开联系方式", "技能总览"],
+    "expectedKeywordsAny": ["公开联系方式", "技能"],
+    "notes": "联系 + 技能多意图。"
+  },
+  {
+    "id": "multi_fuzzy_004",
+    "query": "她背景、项目、联系方式都给我",
+    "intent": "multi",
+    "expectedTypes": ["profile", "project", "contact"],
+    "expectedTitlesAny": ["公开个人信息", "项目经历", "公开联系方式"],
+    "expectedKeywordsAny": ["简介", "项目名称", "公开联系方式"],
+    "notes": "多类综合查询。"
+  },
+  {
+    "id": "negative_fuzzy_001",
+    "query": "她是不是做过 Java 后端电商系统",
+    "intent": "negative",
+    "expectedTypes": [],
+    "expectedTitlesAny": [],
+    "expectedKeywordsAny": [],
+    "shouldNotAnswer": true,
+    "disallowedKeywords": ["Java 后端电商系统"],
+    "notes": "无资料/干扰问题，理想情况下不应强行命中。"
+  },
+  {
+    "id": "negative_fuzzy_002",
+    "query": "她有大厂正式工作经历吗",
+    "intent": "negative",
+    "expectedTypes": [],
+    "expectedTitlesAny": [],
+    "expectedKeywordsAny": [],
+    "shouldNotAnswer": true,
+    "disallowedKeywords": ["大厂正式工作"],
+    "notes": "无资料问题，应低置信度或不回答。"
+  },
+  {
+    "id": "negative_fuzzy_003",
+    "query": "她拿过 ACM 金牌吗",
+    "intent": "negative",
+    "expectedTypes": [],
+    "expectedTitlesAny": [],
+    "expectedKeywordsAny": [],
+    "shouldNotAnswer": true,
+    "disallowedKeywords": ["ACM 金牌"],
+    "notes": "无资料荣誉问题。"
+  },
+  {
+    "id": "negative_fuzzy_004",
+    "query": "她是不是清华毕业的",
+    "intent": "negative",
+    "expectedTypes": [],
+    "expectedTitlesAny": [],
+    "expectedKeywordsAny": [],
+    "shouldNotAnswer": true,
+    "disallowedKeywords": ["清华"],
+    "notes": "错误教育信息，不应被向量弱相关误导。"
+  }
+]

@@ -132,6 +132,43 @@
 - **关联接口**：`GET /api/public/site-config`、`GET /api/admin/site-config`、`PUT /api/admin/site-config/:key`。
 - **备注**：`value_type=json` 时 `config_value` 内容须是合法 JSON；handler 不做强校验，前端按 `value_type` 自行解析。
 
+### about_timeline
+
+- **用途**：owner 公开时间线列表（教育 / 工作 / 项目经历），替代 `content/about/timeline.json`。
+- **DDL**：
+  ```sql
+  CREATE TABLE about_timeline (
+    id             BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    owner_id       BIGINT UNSIGNED NOT NULL,
+    entry_id       VARCHAR(128)    NOT NULL              COMMENT '业务标识，如 education-hnust',
+    entry_type     VARCHAR(32)     NOT NULL              COMMENT '类型：education / work',
+    title          VARCHAR(128)    NOT NULL              COMMENT '标题',
+    organization   VARCHAR(128)    NOT NULL              COMMENT '组织 / 学校 / 公司',
+    location       VARCHAR(128)    NOT NULL DEFAULT ''   COMMENT '地点',
+    start_date     DATE            NOT NULL              COMMENT '开始日期',
+    end_date       DATE            NULL                  COMMENT '结束日期，可空表示至今',
+    description    TEXT            NULL                  COMMENT '描述',
+    achievements   JSON            NULL                  COMMENT '亮点数组',
+    technologies   JSON            NULL                  COMMENT '技术栈数组',
+    is_public      TINYINT(1)      NOT NULL DEFAULT 1    COMMENT '1 公开 0 隐藏',
+    sort_order     INT             NOT NULL DEFAULT 0    COMMENT '排序，升序',
+    created_at     DATETIME(3)     NOT NULL,
+    updated_at     DATETIME(3)     NOT NULL,
+    deleted_at     DATETIME(3)     NULL,
+    UNIQUE KEY uk_owner_entry (owner_id, entry_id),
+    KEY idx_owner_public_sort (owner_id, is_public, sort_order),
+    KEY idx_deleted_at (deleted_at)
+  ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='About 时间线';
+  ```
+- **索引**：
+  - `uk_owner_entry(owner_id, entry_id)`：保证同一 owner 下业务标识唯一，支撑 seed 幂等更新。
+  - `idx_owner_public_sort(owner_id, is_public, sort_order)`：支撑公开列表过滤与排序。
+  - `idx_deleted_at`：GORM 软删除查询过滤。
+- **关联接口**：`GET /api/public/about/timeline`、`GET/POST/PUT/DELETE /api/admin/about/timeline(/:id)`。
+- **备注**：
+  - `achievements` 和 `technologies` 用 JSON 字段存储，不拆子表，保持与现有静态文件结构对齐。
+  - `entry_type` 当前约束为 `education` / `work`；项目经历归入 `work`，避免额外枚举扩散。
+
 ## 待冻结表（Stage 3 / FB-3）
 
 > 状态：✅ 已冻结于 2026-06-02。

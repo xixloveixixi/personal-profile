@@ -70,6 +70,39 @@ export interface AdminSkillPayload {
   sortOrder?: number
 }
 
+export type AdminTimelineType = 'education' | 'work'
+
+export interface AdminTimelineEntry {
+  id: number
+  entryId: string
+  type: AdminTimelineType
+  title: string
+  organization: string
+  location: string
+  startDate: string
+  endDate: string | null
+  description: string
+  achievements: string[]
+  technologies: string[]
+  isPublic: boolean
+  sortOrder: number
+}
+
+export interface AdminTimelinePayload {
+  entryId?: string
+  type?: AdminTimelineType
+  title?: string
+  organization?: string
+  location?: string
+  startDate?: string
+  endDate?: string
+  description?: string
+  achievements?: string[]
+  technologies?: string[]
+  isPublic?: boolean
+  sortOrder?: number
+}
+
 export type SiteConfigValueType = 'string' | 'json' | 'boolean' | 'number'
 
 export interface SiteConfigItem {
@@ -174,6 +207,37 @@ export function updateAdminSkill(
 
 export function deleteAdminSkill(id: number): Promise<{ id: number }> {
   return adminFetch<{ id: number }>(`/api/admin/skills/${id}`, {
+    method: 'DELETE',
+  })
+}
+
+export function getAdminTimeline(): Promise<AdminTimelineEntry[]> {
+  return adminFetch<AdminTimelineEntry[]>('/api/admin/about/timeline', {
+    cache: 'no-store',
+  })
+}
+
+export function createAdminTimeline(
+  payload: AdminTimelinePayload,
+): Promise<AdminTimelineEntry> {
+  return adminFetch<AdminTimelineEntry>('/api/admin/about/timeline', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function updateAdminTimeline(
+  id: number,
+  payload: AdminTimelinePayload,
+): Promise<AdminTimelineEntry> {
+  return adminFetch<AdminTimelineEntry>(`/api/admin/about/timeline/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(payload),
+  })
+}
+
+export function deleteAdminTimeline(id: number): Promise<{ id: number }> {
+  return adminFetch<{ id: number }>(`/api/admin/about/timeline/${id}`, {
     method: 'DELETE',
   })
 }

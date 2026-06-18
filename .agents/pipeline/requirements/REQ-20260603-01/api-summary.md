@@ -7,40 +7,28 @@ REQ-20260603-01
 
 | 方法 | 路径 | Handler | 说明 |
 |------|------|---------|------|
-| GET | /api/health | handler.HealthHandler.Check | 健康检查 + 记录调用日志 |
-| GET | /api/admin/health-stats | handler.HealthStatsHandler.GetStats | 查询最近24小时调用次数 |
+| GET | /api/public/about/timeline | handler.(*AboutTimelineHandler).GetPublicTimeline | 获取公开时间线列表 |
+| GET | /api/admin/about/timeline | handler.(*AboutTimelineHandler).GetAdminTimeline | 获取后台时间线列表 |
+| POST | /api/admin/about/timeline | handler.(*AboutTimelineHandler).CreateTimeline | 新增时间线条目 |
+| PUT | /api/admin/about/timeline/:id | handler.(*AboutTimelineHandler).UpdateTimeline | 更新时间线条目 |
+| DELETE | /api/admin/about/timeline/:id | handler.(*AboutTimelineHandler).DeleteTimeline | 删除时间线条目 |
 
 ## 数据模型
 
 | 表名 | Model | 说明 |
 |------|-------|------|
-| health_check_log | model.HealthCheckLog | 健康检查日志（无软删除） |
+| about_timeline | model.AboutTimeline | About 时间线，含 achievements/technologies JSON 数组 |
 
 ## 文件变更
-- `backend/migrations/0004_health_check_log.sql` — 新增
-- `backend/internal/model/health_check_log.go` — 新增
-- `backend/internal/repository/health_check_log.go` — 新增
-- `backend/internal/handler/health.go` — 修改（增加日志记录逻辑）
-- `backend/internal/handler/health_stats.go` — 新增
-- `backend/internal/router/router.go` — 修改（注册新路由）
+- `backend/internal/model/about_timeline.go` — 新增
+- `backend/internal/repository/about_timeline.go` — 新增
+- `backend/internal/handler/about_timeline.go` — 新增
+- `backend/internal/router/router.go` — 修改
+- `backend/migrations/20260613120000_about_timeline.sql` — 新增
+- `backend/migrations/seed_005_about_timeline.sql` — 新增
+- `backend/docs/api.md` — 修改
 
 ## 验证命令
 ```bash
-# 1. 执行 migration
-mysql -u root -p personal_profile < backend/migrations/0004_health_check_log.sql
-
-# 2. 启动后端
-cd backend && go run cmd/server/main.go
-
-# 3. 调用健康检查（写入日志）
-curl -X GET http://localhost:8080/api/health
-
-# 4. 获取 token
-TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"username":"owner","password":"admin123"}' | jq -r '.data.accessToken')
-
-# 5. 查询统计
-curl -X GET http://localhost:8080/api/admin/health-stats \
-  -H "Authorization: Bearer $TOKEN"
+curl -X GET http://localhost:8080/api/public/about/timeline
 ```

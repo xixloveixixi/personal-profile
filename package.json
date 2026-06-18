@@ -11,6 +11,9 @@
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md}\"",
     "publish:juejin": "npx ts-node scripts/publish-juejin.ts",
     "harness:check": "node scripts/harness-check.js",
+    "eval:retrieval": "node scripts/evaluate-retrieval.js",
+    "eval:ragas": "python3 scripts/evaluate-ragas.py",
+    "eval:rag-experiments": "node scripts/run-rag-experiments.js",
     "init:knowledge": "curl -X POST http://localhost:3000/api/init-knowledge || echo '请先运行 npm run dev，然后在浏览器访问 http://localhost:3000/api/init-knowledge 或使用 curl 命令'"
   },
   "dependencies": {

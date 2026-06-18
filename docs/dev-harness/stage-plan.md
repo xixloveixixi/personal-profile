@@ -216,7 +216,7 @@
 - 新增 `lib/api/public.ts`：4 个读接口的 typed client。
 - 用 Next.js Server Component 直接 `await` 调用，不引入 SWR/React Query。
 - 把现有读静态数据的 4 处页面切到 API 调用。
-- 删除已迁移完毕的 `content/about/contact.json` / `content/about/skills.json` 静态文件（`content/about/timeline.json` 暂留，无对应 API）。
+- 删除已迁移完毕的 `content/about/contact.json` / `content/about/skills.json` 静态文件（`content/about/timeline.json` 当时暂留，无对应 API；本轮补齐后端化缺口）。
 - 加 `loading.tsx` / `error.tsx` 兜底 UI。
 
 ### 本阶段不做什么
@@ -260,7 +260,7 @@
 - [x] `npm run build` 通过，无类型错误。
 - [x] 4 个公开页本地访问与切前完全一致（视觉、内容）。
 - [x] 后端关停时 4 个公开页显示 error.tsx 兜底，不白屏。
-- [x] `content/about/contact.json` / `content/about/skills.json` 已迁移项已被删除，`timeline.json` 保留。
+- [x] `content/about/contact.json` / `content/about/skills.json` 已迁移项已被删除；`timeline.json` 为后续补齐后端化预留。 
 
 #### Gate F：沉淀闸门
 
@@ -551,7 +551,245 @@
 
 ---
 
-## 当前阶段：阶段 9 Learning Coach Agent (FB-7)
+## 当前阶段：阶段 11 Learning Coach 体验增强（FB-8）
+
+### 阶段目标
+
+在已完成 Agent 对话、历史回放和计划生成的基础上，增强 Learning Coach 的可用性与可观测性：补齐 Tool 调用可视化、会话状态反馈和更稳定的多轮体验，让 AI 教练从“能用”提升到“更顺手”。
+
+### 本阶段做什么
+
+- 在聊天界面展示 Tool 调用过程（调用中 / 已完成 / 结果摘要）。
+- 增强消息状态反馈（发送中、流式生成中、失败重试）。
+- 优化多轮对话体验：切换会话、续聊、删除会话后的状态一致性。
+- 优化历史加载体验：更早消息加载中的占位、去重、防重复请求。
+- 视需要补最小后端/Agent 接口字段，支撑前端展示更完整的事件信息。
+
+### 本阶段不做什么
+
+- 不做多 Agent 协作。
+- 不做长期记忆表（`agent_memory`）。
+- 不做外部搜索或资料抓取。
+- 不做复杂数据分析看板。
+- 不重构现有学习计划 / 学习目标主流程。
+
+### 闸门检查
+
+#### Gate A：需求闸门
+
+- [x] 是否确认本阶段只做 Learning Coach 体验增强，不扩展到新业务域？
+- [x] 是否确认优先级聚焦在 Tool 可视化、消息状态反馈、多轮会话稳定性？
+- [x] 是否确认验收标准是：聊天体验更可感知、历史/续聊更稳定、现有构建与接口不回退？
+
+#### Gate B：设计闸门
+
+- [x] 是否明确前端展示哪些 Agent 事件类型（本阶段必做 `token` / `done` / `error`；`tool_call` / `tool_result` 仅保留兼容入口，不作为主验收项）？
+- [x] 是否明确是否需要新增或调整 Python SSE 事件字段（优先不改协议；仅当失败态无法区分时，才最小补充 `retryable` 或等价字段）？
+- [x] 是否明确前端状态机（最小方案：`idle → sending → streaming → done | error`，不引入全局 store）？
+- [x] 是否明确失败恢复策略（仅支持“重发上一条用户消息”，不做断点续流）？
+- [x] 是否明确空状态区分（无历史会话 vs 当前会话暂无消息）？
+
+#### Gate C：学习闸门
+
+- [x] 是否了解当前聊天页 SSE 消费链路与消息状态管理方式？
+- [x] 是否了解 Python Agent SSE 事件结构与落库链路？
+
+#### Gate D：编码闸门
+
+- [x] 是否明确影响范围仅限 `app/admin/learning/chat`、相关 API client 与必要的 agent-service 事件结构？
+- [x] 是否明确验收方式（浏览器实测 + `npm run build` + agent-service 启动/导入验证）？
+
+#### Gate E：验证闸门
+
+- [ ] Tool 调用过程在前端可见，且不会打断现有流式回复。（代码已接入，待浏览器实测）
+- [ ] 会话切换 / 删除 / 续聊行为稳定，无重复消息或错乱状态。（待浏览器实测）
+- [ ] 历史加载更早消息时无重复请求、无重复渲染。（待浏览器实测）
+- [x] `npm run build` 通过。
+- [x] agent-service 导入 / 启动验证通过。
+
+#### Gate F：沉淀闸门
+
+- [ ] `progress-log.md` 已更新。
+- [ ] 新踩坑已写入 `pitfalls.md`（如有）。
+- [x] 下一阶段范围已明确。
+
+### 进入前置条件
+
+- [x] 阶段 10 Gate E/F 已通过（见 `progress-log.md` 2026-06-13）。
+- [x] 现有 Agent 对话、历史回放、计划生成链路可用。
+
+---
+
+## 下一阶段候选：阶段 12 私有学习知识图谱（FB-9）（草案）
+
+> 状态：已完成设计草案，等待阶段 11 Gate E/F 完成后进入 REQUIREMENT。
+> 设计文档：`docs/superpowers/specs/2026-06-15-learning-knowledge-graph-design.md`
+
+### 阶段目标
+
+在现有学习画像、学习目标、学习计划和 AI Coach 之上，新增私有学习知识图谱，作为 AI 教练制定目标、生成计划、分析能力差距和解释推荐依据的结构化上下文。
+
+### 本阶段做什么
+
+- 新增 `knowledge_node` / `knowledge_edge` 两张图谱表，支持技能、知识点、项目、目标、薄弱点、资源等节点。
+- 冻结知识图谱 CRUD、初始化、摘要、目标相关子图、下一步路径推荐等私有接口。
+- 在学习工作台左侧菜单分组下新增 `知识图谱` 子页面，采用管理优先形态。
+- 支持从现有学习目标、学习计划/任务、公开技能、项目数据初始化图谱。
+- 为 Python Agent 新增只读图谱工具：整体摘要、目标相关子图、下一步学习路径。
+- 将目标相关知识子图接入计划生成 prompt 和 Learning Coach 聊天依据。
+
+### 本阶段不做什么
+
+- 不做公开个人站展示。
+- 不做复杂图谱画布或拖拽编辑。
+- 不允许 AI 直接写入图谱；后续再做“AI 建议变更 + 用户确认”。
+- 不做多 Agent 协作。
+- 不替代现有学习画像、学习目标、学习计划，只作为补充依据。
+
+### 闸门检查
+
+#### Gate A：需求闸门
+
+- [ ] 是否确认本阶段聚焦私有学习知识图谱，不做公开展示？
+- [ ] 是否确认第一版采用“CRUD + 目标相关子图 + 简单路径推荐”？
+- [ ] 是否确认 AI 第一版只读图谱，不直接写入节点和关系？
+- [ ] 是否确认验收标准是：图谱可维护、可初始化、AI Coach 生成计划和聊天能引用图谱依据？
+
+#### Gate B：设计闸门
+
+- [ ] `schema.md` 中 `knowledge_node` / `knowledge_edge` DDL 是否已冻结？
+- [ ] `api-contract.md` 中节点/关系 CRUD、初始化、summary、goal graph、next path 接口是否已冻结？
+- [ ] 是否确认节点类型：`skill` / `concept` / `project` / `goal` / `weakness` / `resource`？
+- [ ] 是否确认关系类型：`depends_on` / `contains` / `supports_goal` / `used_in_project` / `has_weakness` / `recommended_resource` / `next_step` / `proves`？
+- [ ] 是否确认前端入口复用 `学习工作台` 菜单分组，新增 `/admin/learning/knowledge-graph` 子页面？
+- [ ] 是否确认 Agent 图谱工具均为只读工具？
+
+#### Gate C：学习闸门
+
+- [ ] 是否了解当前学习工作台菜单与页面组织方式？
+- [ ] 是否了解 GORM 自关联表 / edge 表的基本建模方式？
+- [ ] 是否了解 Python Agent tools 如何透传 token 调用 Go private API？
+- [ ] 是否了解计划生成 prompt 当前如何拼接画像、目标和偏好？
+
+#### Gate D：编码闸门
+
+- [ ] 是否明确影响范围：`schema.md`、`api-contract.md`、backend model/repository/handler/router、`lib/api/private.ts`、`app/admin/layout.tsx`、`app/admin/learning/knowledge-graph`、`agent-service/app/tools/learning.py`、`agent-service/app/api/generate.py`、`agent-service/app/agents/learning_coach.py`？
+- [ ] 是否明确本阶段验收方式：migration/seed 执行、curl 接口验证、浏览器工作台验证、AI 计划生成验证、`go build ./...`、`npm run build`、agent-service 导入/启动验证？
+- [ ] 是否确认不新增图数据库，继续使用 MySQL 表结构表达图谱？
+
+#### Gate E：验证闸门
+
+- [ ] `knowledge_node` / `knowledge_edge` 表已建，migration 可执行。
+- [ ] 节点 CRUD curl 全通。
+- [ ] 关系 CRUD curl 全通。
+- [ ] 初始化接口可从现有数据生成图谱节点和关系，且幂等执行不重复造脏数据。
+- [ ] summary / goal graph / next path 接口返回结构正确。
+- [ ] `/admin/learning/knowledge-graph` 页面可在学习工作台菜单进入，并可维护节点和关系。
+- [ ] AI 使用预览能展示目标相关子图和推荐路径。
+- [ ] AI Coach 计划生成会读取目标相关子图，并在计划中体现依据。
+- [ ] AI Coach 聊天能基于图谱回答目标差距、薄弱点、项目证明和下一步学习建议。
+- [ ] `go build ./...` 通过。
+- [ ] `npm run build` 通过。
+- [ ] agent-service 导入 / 启动验证通过。
+
+#### Gate F：沉淀闸门
+
+- [ ] `progress-log.md` 已更新。
+- [ ] 新踩坑已写入 `pitfalls.md`（如有）。
+- [ ] 下一阶段范围已明确。
+
+### 节奏建议
+
+| 天数 | 目标 | 产出 |
+| --- | --- | --- |
+| Day 1 | 冻结 schema 与 API 契约 | `knowledge_node` / `knowledge_edge` DDL + 私有接口契约 |
+| Day 2 | 后端图谱 CRUD 与初始化 | migration + model/repo/handler/router + curl 基础验证 |
+| Day 3 | 目标子图与路径推荐接口 | summary / goal graph / next path 可用 |
+| Day 4 | 前端知识图谱管理页 | 节点/关系管理 + 初始化 + AI 使用预览 |
+| Day 5 | Agent 只读工具接入 | 图谱工具 + 计划生成 prompt + 聊天依据 |
+| Day 6 | 联调验收与沉淀 | build / curl / 浏览器 / agent-service 验收 |
+
+### 降级策略
+
+- 自关联查询复杂：先限制 goal graph 为一跳关系，二跳关系后补。
+- 初始化规则复杂：先只从学习目标、公开技能、项目生成节点，计划/任务来源后补。
+- 路径推荐复杂：先按 `next_step` 和 `has_weakness` 排序，不做复杂图算法。
+- 前端页面耗时：先实现节点/关系表格和 AI 使用预览，初始化 UI 可简化为单按钮 + 结果摘要。
+
+### 进入前置条件
+
+- [ ] 阶段 11 Gate E/F 全部通过。
+- [x] 设计文档已确认：`docs/superpowers/specs/2026-06-15-learning-knowledge-graph-design.md`。
+- [ ] 用户确认进入阶段 12 REQUIREMENT。
+
+---
+
+## 阶段 10 历史对话列表与回放（FB-7.5）（已完成）
+
+### 阶段目标
+
+在 Learning Coach Agent MVP 基础上，补齐历史对话列表、回放与超长消息场景下的分页加载能力，让用户可以继续旧对话，而不是只能单次新聊。
+
+### 本阶段做什么
+
+- Python agent-service：为历史接口增加 `limit` / `before_id` 分页参数。
+- Python agent-service：历史响应补充 `messages` / `hasMore` / `nextBeforeId`。
+- 前端聊天页新增左侧历史对话列表、点击回放、删除会话、新建会话。
+- 前端支持“加载更早消息”，并保持现有 Markdown / 流式体验不回退。
+
+### 本阶段不做什么
+
+- 不做 Tool 调用可视化。
+- 不做多 Agent 会话编排。
+- 不做额外缓存层或搜索能力。
+
+### 闸门检查
+
+#### Gate A：需求闸门
+
+- [x] 是否确认本阶段只做历史对话列表、回放与超长消息分页？
+- [x] 是否确认不扩展到新业务能力，只补会话体验？
+- [x] 是否确认验收标准是：能回放历史、能分页加载更早消息、构建与服务验证通过？
+
+#### Gate B：设计闸门
+
+- [x] 是否明确历史接口分页参数与响应结构？
+- [x] 是否明确前端历史列表 / 回放 / 删除的最小交互？
+- [x] 是否明确继续沿用现有 MySQL 历史存储，不引入新缓存层？
+
+#### Gate C：学习闸门
+
+- [x] 是否了解聊天页当前 SSE 消费方式与消息列表状态？
+- [x] 是否了解 Python 3.9 环境下类型注解兼容要求？
+
+#### Gate D：编码闸门
+
+- [x] 是否明确影响范围：`agent-service/app/api/chat.py`、`agent-service/app/models/schemas.py`、`app/admin/learning/chat/page.tsx`、`lib/api/private.ts`？
+- [x] 是否明确验收方式：接口实测 + `npm run build` + agent-service 导入验证？
+
+#### Gate E：验证闸门
+
+- [x] `GET /api/chat/history/:conversation_id` 支持 `limit` / `before_id`。
+- [x] 历史响应包含 `messages` / `hasMore` / `nextBeforeId`。
+- [x] 新对话发送后可落库，并能通过历史接口回放验证。
+- [x] 前端历史对话列表 / 回放 / 加载更早消息代码已接入并构建通过。
+- [x] `npm run build` 通过。
+- [x] agent-service 导入与启动验证通过。
+
+#### Gate F：沉淀闸门
+
+- [x] `progress-log.md` 已更新。
+- [x] `pitfalls.md` 已补充 Python 版本兼容踩坑。
+- [x] 阶段 10 用户浏览器验收已通过。
+
+### 进入前置条件
+
+- [x] 阶段 9 Gate E/F 已通过。
+- [x] 现有 Learning Coach 对话链路可用。
+
+---
+
+## 阶段 9 Learning Coach Agent (FB-7)（已完成）
 
 ### 阶段目标
 

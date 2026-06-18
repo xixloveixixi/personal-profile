@@ -295,6 +295,63 @@
 
 ---
 
+### GET /api/public/about/timeline
+
+获取公开时间线列表（仅 `is_public=1`，按 `sort_order ASC, id ASC` 排序）。
+
+**成功响应 data**：
+```json
+[
+  {
+    "id": 1,
+    "entryId": "education-hnust",
+    "type": "education",
+    "title": "本科",
+    "organization": "湖南科技大学",
+    "location": "湖南湘潭",
+    "startDate": "2021-09-01",
+    "endDate": "2027-06-30",
+    "description": "数据科学与大数据技术专业...",
+    "achievements": ["系统学习计算机基础课程"],
+    "technologies": ["数据科学", "大数据技术"],
+    "sortOrder": 0
+  }
+]
+```
+
+### GET /api/admin/about/timeline
+
+后台获取全量时间线（含隐藏项，额外含 `isPublic`）。需 Bearer Token。
+
+### POST /api/admin/about/timeline
+
+新增时间线条目。需 Bearer Token。
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| entryId      | string   | 是 | <=128 字 |
+| type         | string   | 是 | `education` / `work` |
+| title        | string   | 是 | <=128 字 |
+| organization | string   | 是 | <=128 字 |
+| location     | string   | 否 | <=128 字 |
+| startDate    | string   | 是 | `YYYY-MM-DD` |
+| endDate      | string   | 否 | `YYYY-MM-DD`，可传 `null` |
+| description  | string   | 否 | <=5000 字 |
+| achievements | string[] | 否 | 默认 `[]` |
+| technologies | string[] | 否 | 默认 `[]` |
+| isPublic     | bool     | 否 | 默认 true |
+| sortOrder    | int      | 否 | 默认 0 |
+
+### PUT /api/admin/about/timeline/:id
+
+更新时间线条目。需 Bearer Token。字段同 POST，全部可选；`endDate` 支持传 `null` 清空。`40400` 当 id 不存在。
+
+### DELETE /api/admin/about/timeline/:id
+
+软删时间线条目。需 Bearer Token。返回 `{"id": xxx}`。`40400` 当 id 不存在。
+
+---
+
 ### GET /api/public/site-config
 
 获取站点配置全集（K-V 数组，按 `config_key ASC` 排序）。
@@ -357,6 +414,18 @@ curl http://localhost:8080/api/public/contacts
 
 # Stage 2: 后台联系方式列表（含隐藏项）
 curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/admin/contacts
+
+# Stage 2: 公开时间线列表（无 token）
+curl http://localhost:8080/api/public/about/timeline
+
+# Stage 2: 后台时间线列表（含隐藏项）
+curl -H "Authorization: Bearer $TOKEN" http://localhost:8080/api/admin/about/timeline
+
+# Stage 2: 新增时间线条目
+curl -X POST http://localhost:8080/api/admin/about/timeline \
+  -H "Authorization: Bearer $TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"entryId":"work-demo","type":"work","title":"Demo","organization":"Example Org","startDate":"2026-01-01","endDate":null,"achievements":[],"technologies":["Go"],"isPublic":true,"sortOrder":99}'
 
 # Stage 2: 新增联系方式
 curl -X POST http://localhost:8080/api/admin/contacts \

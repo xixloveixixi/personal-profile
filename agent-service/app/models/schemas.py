@@ -1,7 +1,7 @@
 """Pydantic models for API requests and responses."""
 
 from typing import Optional, List, Any
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import date
 
 
@@ -13,7 +13,9 @@ class ChatRequest(BaseModel):
 
 class GeneratePlanRequest(BaseModel):
     """Generate plan request body."""
-    goal_id: int
+    model_config = ConfigDict(populate_by_name=True)
+
+    goal_id: int = Field(alias="goalId")
     preferences: Optional[str] = None
 
 
@@ -43,7 +45,7 @@ class GeneratePlanResponse(BaseModel):
 class Message(BaseModel):
     """Chat message."""
     id: int
-    role: str  # user / assistant / system / tool
+    role: str
     content: str
     toolCalls: Optional[List[Any]] = None
     createdAt: str
@@ -52,3 +54,5 @@ class Message(BaseModel):
 class ChatHistoryResponse(BaseModel):
     """Chat history response."""
     messages: List[Message]
+    hasMore: bool
+    nextBeforeId: Optional[int] = None

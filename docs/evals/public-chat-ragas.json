@@ -1,0 +1,60 @@
+[
+  {
+    "id": "ragas_profile_001",
+    "query": "简单介绍下阿菥",
+    "reference": "应基于公开个人信息介绍阿菥的姓名、个人定位、当前关注方向和公开简介；不能补充未在公开资料出现的经历。",
+    "expectedTypes": ["profile"],
+    "expectedKeywordsAny": ["姓名", "标题", "简介", "当前关注"]
+  },
+  {
+    "id": "ragas_contact_001",
+    "query": "怎么联系她",
+    "reference": "应回答公开联系方式中可用的邮箱、GitHub 或其他公开平台链接；不能返回私有联系方式或未公开渠道。",
+    "expectedTypes": ["contact"],
+    "expectedKeywordsAny": ["公开联系方式", "邮箱", "email", "GitHub", "github"]
+  },
+  {
+    "id": "ragas_skill_001",
+    "query": "她前端怎么样，主要会哪些技术",
+    "reference": "应基于公开技能数据说明前端相关技术栈，例如 React、TypeScript、Next.js 等，并尽量结合熟练度或描述回答。",
+    "expectedTypes": ["skill"],
+    "expectedKeywordsAny": ["React", "TypeScript", "Next.js", "前端"]
+  },
+  {
+    "id": "ragas_project_001",
+    "query": "她做过哪些 React 相关项目",
+    "reference": "应从公开项目或项目时间线中找出 React 或 Next.js 相关项目，说明项目名称、技术栈和简要内容；不能编造不存在的项目。",
+    "expectedTypes": ["project"],
+    "expectedKeywordsAny": ["React", "Next.js", "项目名称", "技术栈"]
+  },
+  {
+    "id": "ragas_timeline_001",
+    "query": "她之前在哪里实习过",
+    "reference": "应基于公开时间线回答实习或工作经历，包括组织、岗位和时间信息；如果公开资料不足，应说明只能基于当前公开信息回答。",
+    "expectedTypes": ["timeline"],
+    "expectedKeywordsAny": ["工作经历", "实习", "组织", "时间"]
+  },
+  {
+    "id": "ragas_multi_001",
+    "query": "介绍下她的项目和技术栈",
+    "reference": "应同时覆盖公开项目和公开技能两类信息，列出主要项目、项目技术栈和总体技能方向；不能只回答其中一类。",
+    "expectedTypes": ["project", "skill"],
+    "expectedKeywordsAny": ["项目名称", "技术栈", "技能"]
+  },
+  {
+    "id": "ragas_negative_001",
+    "query": "她是不是做过 Java 后端电商系统",
+    "reference": "如果公开资料没有 Java 后端电商系统相关证据，应明确说明当前公开资料中没有该信息，不能声称做过。",
+    "expectedTypes": [],
+    "expectedKeywordsAny": [],
+    "isNegative": true
+  },
+  {
+    "id": "ragas_negative_002",
+    "query": "她拿过 ACM 金牌吗",
+    "reference": "如果公开资料没有 ACM 金牌相关证据，应明确说明没有在公开资料中找到该信息，不能编造奖项。",
+    "expectedTypes": [],
+    "expectedKeywordsAny": [],
+    "isNegative": true
+  }
+]

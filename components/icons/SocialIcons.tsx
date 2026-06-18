@@ -1,4 +1,4 @@
-import { GithubOutlined, WechatOutlined } from '@ant-design/icons'
+import { GithubOutlined, MailOutlined, PhoneOutlined, WechatOutlined } from '@ant-design/icons'
 
 export const GithubIcon = ({ className }: { className?: string }) => (
   <GithubOutlined className={className} style={{ fontSize: '25px', width: '20px', height: '20x' }} />
@@ -13,6 +13,14 @@ export const CSDNIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor" width={24} height={24}>
     <text x="50%" y="50%" dominantBaseline="middle" textAnchor="middle" fontSize="18" fontWeight="bold" fontFamily="Arial, sans-serif">C</text>
   </svg>
+)
+
+export const EmailIcon = ({ className }: { className?: string }) => (
+  <MailOutlined className={className} style={{ fontSize: '24px', width: '20px', height: '20px' }} />
+)
+
+export const PhoneIcon = ({ className }: { className?: string }) => (
+  <PhoneOutlined className={className} style={{ fontSize: '24px', width: '20px', height: '20px' }} />
 )
 
 // 掘金图标 - 使用更美观的图标（简洁的六边形/钻石形状）
@@ -38,5 +46,10 @@ export const iconMap: Record<string, React.ComponentType<{ className?: string }>
   // 中文映射
   微信: WeChatIcon,
   掘金: JuejinIcon,
+  电话: PhoneIcon,
+  // 其他常见平台
+  email: EmailIcon,
+  Email: EmailIcon,
+  phone: PhoneIcon,
 }
 

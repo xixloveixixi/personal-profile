@@ -9,6 +9,7 @@ import {
   InputNumber,
   Modal,
   Popconfirm,
+  Select,
   Space,
   Switch,
   Table,
@@ -35,6 +36,25 @@ interface SkillFormValues {
   isPublic: boolean
   sortOrder: number
 }
+
+const SKILL_CATEGORY_OPTIONS = [
+  { label: '前端基础', value: '前端基础' },
+  { label: '前端框架与生态', value: '前端框架与生态' },
+  { label: '数据可视化', value: '数据可视化' },
+  { label: '前端工程化', value: '前端工程化' },
+  { label: '后端开发', value: '后端开发' },
+  { label: 'AI 工程实践', value: 'AI 工程实践' },
+  { label: '开发工具与协作', value: '开发工具与协作' },
+  { label: '技能证书', value: '技能证书' },
+]
+
+const SKILL_PROFICIENCY_OPTIONS = [
+  { label: '熟练', value: '熟练' },
+  { label: '熟悉', value: '熟悉' },
+  { label: '了解', value: '了解' },
+  { label: '项目实践', value: '项目实践' },
+  { label: '已获证书', value: '已获证书' },
+]
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof ApiError || error instanceof Error) {
@@ -287,10 +307,21 @@ export default function AdminSkillsPage() {
             <Input maxLength={64} placeholder="例如：React" showCount />
           </Form.Item>
           <Form.Item label="分类" name="category">
-            <Input maxLength={64} placeholder="例如：frontend" showCount />
+            <Select
+              options={SKILL_CATEGORY_OPTIONS}
+              placeholder="请选择技能分类"
+              allowClear
+              showSearch
+              optionFilterProp="label"
+            />
           </Form.Item>
           <Form.Item label="熟练度" name="proficiencyLevel">
-            <Input maxLength={64} placeholder="例如：熟练 / 掌握 / 了解" showCount />
+            <Select
+              options={SKILL_PROFICIENCY_OPTIONS}
+              placeholder="请选择熟练度"
+              allowClear
+              optionFilterProp="label"
+            />
           </Form.Item>
           <Form.Item label="描述" name="description">
             <Input.TextArea

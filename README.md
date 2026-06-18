@@ -34,8 +34,7 @@ npm install
 
 3. Create content files:
    - Add blog articles as MDX files in `content/blog/`
-   - Add portfolio projects as JSON files in `content/projects/`
-   - Add profile data in `content/about/` (skills.json, timeline.json, contact.json)
+   - 博客主数据源继续使用 Notion；个人信息、项目、时间线等业务数据通过后端与数据库维护
 
 ### Development
 

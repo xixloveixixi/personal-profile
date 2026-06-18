@@ -95,7 +95,7 @@ export interface VectorChunkInput {
   id: string
   content: string
   metadata: {
-    type: 'personal' | 'skill' | 'project' | 'blog' | 'timeline'
+    type: 'personal' | 'profile' | 'contact' | 'skill' | 'project' | 'blog' | 'timeline'
     source?: string
     title?: string
     organization?: string
@@ -171,10 +171,10 @@ export async function storeVectors(chunks: VectorChunkInput[]) {
         metadata: v.metadata,
       }))
 
-      // 使用 Supabase 的批量插入
+      // 使用 upsert 允许重复初始化时刷新已有 chunk
       const { data, error } = await getSupabase()
         .from('knowledge_vectors')
-        .insert(batchData)
+        .upsert(batchData, { onConflict: 'id' })
         .select('id')
 
       if (error) {
@@ -185,12 +185,12 @@ export async function storeVectors(chunks: VectorChunkInput[]) {
           try {
             const { error: singleError } = await getSupabase()
               .from('knowledge_vectors')
-              .insert({
+              .upsert({
                 id: v.id,
                 content: v.content,
                 embedding: v.embedding,
                 metadata: v.metadata,
-              })
+              }, { onConflict: 'id' })
 
             if (singleError) {
               console.error(`✗ 存储失败 ${v.id}:`, singleError.message)
@@ -356,11 +356,32 @@ export async function searchSimilarVectors(
       return await searchByText(query, limit)
     }
 
-    // 如果查询实习/工作经历，确保返回所有相关记录
+    // 如果查询项目经历，优先返回从时间线中提取的 project 类型记录。
     const queryLower = query.toLowerCase()
-    const isWorkQuery = queryLower.includes('实习') || queryLower.includes('工作') || 
-                        queryLower.includes('公司') || queryLower.includes('经历')
-    
+    const isProjectQuery = queryLower.includes('项目') || queryLower.includes('作品')
+    const isWorkQuery = !isProjectQuery && (
+      queryLower.includes('实习') ||
+      queryLower.includes('工作') ||
+      queryLower.includes('公司') ||
+      queryLower.includes('经历')
+    )
+
+    if (isProjectQuery && data && data.length > 0) {
+      const { data: allProjectData, error: projectError } = await getSupabase()
+        .from('knowledge_vectors')
+        .select('content, metadata')
+        .filter('metadata->>type', 'eq', 'project')
+
+      if (!projectError && allProjectData && allProjectData.length > 0) {
+        console.log(`[Vector Search] 项目查询: 返回 ${allProjectData.length} 条项目经历`)
+        return allProjectData.map((item: any) => ({
+          content: item.content,
+          metadata: item.metadata,
+          similarity: 1.0,
+        }))
+      }
+    }
+
     if (isWorkQuery && data && data.length > 0) {
       // 获取所有工作经历（timeline 类型）
       const { data: allWorkData, error: workError } = await getSupabase()

@@ -1,7 +1,5 @@
-import { getPublicProjects } from '@/lib/api/public'
+import { getPublicProjects, getPublicSkills, getPublicTimeline } from '@/lib/api/public'
 import { getPublishedPosts, getPostContent } from '@/lib/notion'
-import { getPublicSkills } from '@/lib/api/public'
-import timelineData from '@/content/about/timeline.json'
 
 export interface KnowledgeChunk {
   id: string
@@ -80,13 +78,13 @@ ${skills.map(s => `- ${s.name} (${s.category}): ${s.proficiencyLevel} - ${s.desc
 /**
  * 创建时间线经历知识块（教育 + 工作 + 项目经历）
  */
-function createTimelineChunks(timeline: typeof timelineData): KnowledgeChunk[] {
+function createTimelineChunks(timeline: Awaited<ReturnType<typeof getPublicTimeline>>): KnowledgeChunk[] {
   const chunks: KnowledgeChunk[] = []
   
   // 按类型分组，创建多个知识块以提高搜索精度
-  const workItems = timeline.filter(item => item.type === 'work')
   const educationItems = timeline.filter(item => item.type === 'education')
-  const projectItems = timeline.filter(item => item.type === 'project')
+  const projectItems = timeline.filter(item => item.type === 'work' && item.organization === '项目经历')
+  const workItems = timeline.filter(item => item.type === 'work' && item.organization !== '项目经历')
   
   // 创建工作经历知识块（每个经历独立，提高搜索精度）
   for (const item of workItems) {
@@ -281,7 +279,8 @@ export async function buildKnowledgeBase(): Promise<KnowledgeChunk[]> {
   chunks.push(...createSkillsChunks(skills))
 
   // 3. 时间线经历（教育 + 工作 + 项目）
-  chunks.push(...createTimelineChunks(timelineData))
+  const timeline = await getPublicTimeline().catch(() => [])
+  chunks.push(...createTimelineChunks(timeline))
 
   // 4. 项目详情（portfolio 数据）
   chunks.push(...await createProjectChunks())

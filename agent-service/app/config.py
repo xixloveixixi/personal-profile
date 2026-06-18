@@ -1,14 +1,17 @@
 """Agent Service Configuration."""
 
-from pydantic_settings import BaseSettings
 from functools import lru_cache
+from typing import List
+
+from pydantic import Field
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
     # DeepSeek API
-    deepseek_api_key: str = ""
+    deepseek_api_key: str = "sk-d2769dba27974b9b9ab2faebb89d613f"
     deepseek_base_url: str = "https://api.deepseek.com/v1"
     deepseek_model: str = "deepseek-chat"
 
@@ -25,6 +28,16 @@ class Settings(BaseSettings):
 
     # Go Backend (for tool calls)
     backend_url: str = "http://localhost:8080"
+
+    # CORS
+    cors_allowed_origins: List[str] = Field(
+        default_factory=lambda: [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:3001",
+            "http://127.0.0.1:3001",
+        ]
+    )
 
     class Config:
         env_file = ".env"

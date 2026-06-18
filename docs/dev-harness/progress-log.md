@@ -782,3 +782,243 @@
 
 ### 明日第一步
 - FB-5 全部完成。用户发起下一阶段时再推进。
+
+## 2026-06-10
+
+### 今日目标
+- 完成阶段 9（FB-7）：Learning Coach Agent 全栈实现。
+
+### 今日完成
+- Go 后端：`agent_conversation` / `agent_message` 两张表的 model + repo + handler + 路由注册。
+- Go 后端：`ProxyGeneratePlan` 代理调用 Python agent-service（替换原 mock），配置 `AGENT_SERVICE_URL`。
+- Python Agent：LangGraph agent 对话持久化（自动建对话 + 续接 + 消息存储）。
+- Python Agent：6 个 Tools（get_learning_profile/goals/plans + create_plan/task + update_progress），透传 Bearer token。
+- Python Agent：SSE 流式响应（token/tool_call/tool_result/done 四种事件）。
+- Python Agent：`POST /api/generate/plan` 接口增加认证 + token 透传。
+- Python Agent：`verify_token()` 调用 Go 后端 `/api/auth/me` 校验 + 缓存。
+- 前端：`/admin/learning/chat` 对话页面（SSE 流式接收、消息气泡、新建对话）。
+- 前端：admin layout 菜单新增"AI 教练"入口。
+- Docker Compose：mysql + backend + agent + frontend 四服务编排。
+- 新增 `backend/Dockerfile`（Go 多阶段构建）+ 根目录 `Dockerfile`（Next.js standalone）。
+- MySQL migration `0005_agent.sql` 执行成功。
+- `go build ./...` → EXIT 0。
+- `npm run build` → EXIT 0。
+
+### 当前阻塞
+- 无。阶段 9 浏览器侧和接口侧联调已打通。
+
+### 关键决策
+- 前端直接调 Python agent-service 的 `/api/chat`（不经过 Go proxy），因为 SSE 长连接不适合再套一层代理。
+- Go 后端仅代理 `/api/private/learning/plans/generate`（一次性 JSON 响应），其余 agent 接口前端直连 Python。
+- Docker Compose 使用 bridge network，服务间通过容器名互相访问。
+- 首版前端对话界面做最简 MVP：不做 markdown 渲染、不做 Tool 调用展示、不做历史对话列表。
+
+### Gate E 状态
+- [x] `agent_conversation` + `agent_message` 表已建并可写
+- [x] Go 后端 `GET /api/private/agent/conversations` + `DELETE` 路由注册，编译通过
+- [x] Go 后端 `ProxyGeneratePlan` 代理透传正常（编译验证）
+- [x] Python agent-service 可独立启动（6 tools + 4 routes）
+- [x] `POST /api/chat` SSE 流式响应（结构正确）
+- [x] `POST /api/generate/plan` 认证 + token 透传
+- [x] 前端 `/admin/learning/chat` 页面编译通过
+- [x] Docker Compose `docker compose config` 语法通过
+- [x] `npm run build` 通过
+- [x] `go build ./...` 通过
+- [x] 端到端联调已完成（登录后台、进入 AI 教练、普通消息可返回、真实 LLM 计划生成已打通）
+- [x] 浏览器验收已完成（修复 `.next` 缓存 500、补齐菜单入口、修复 Markdown 裸 `*` 展示）
+
+### Gate F 状态
+- [x] `progress-log.md` 已更新
+- [ ] 踩坑写入 `pitfalls.md`
+- [x] 游标已挪动（阶段 9 标记为已完成）
+
+### 明日第一步
+- 起草阶段 10 范围，进入 REQUIREMENT。
+
+## 2026-06-13
+
+### 今日目标
+- 完成阶段 10：历史对话列表与回放，并兼顾超长消息历史场景。
+- 补齐公开 about 时间线的数据库化缺口，移除 `timeline.json` 作为主数据源。
+
+### 今日完成
+- Python agent-service：`GET /api/chat/history/{conversation_id}` 增加分页参数 `limit` / `before_id`，默认仅加载最近 100 条消息。
+- Python agent-service：历史消息响应补充 `hasMore` + `nextBeforeId`，支持前端“加载更早消息”。
+- 前端：`app/admin/learning/chat/page.tsx` 增加左侧历史对话列表、点击回放、删除对话、新建对话、加载更早消息。
+- 前端：保留阶段 9 的 Markdown 渲染与可感知流式输出逻辑，并在新旧对话切换时保持消息区滚动行为可控。
+- 前端：`lib/api/private.ts` 增加 `getAgentConversations` / `deleteAgentConversation` / `getAgentConversationHistory` 三个客户端函数。
+- 修复联调阻塞：分页接口最初使用 `before_id: int | None`，在本机 Python 3.9 下导入应用时报错；已改为 `Optional[int]`，agent-service 可正常启动。
+- about 时间线：冻结 `about_timeline` 表结构与接口契约，新增 Go model / repository / handler / router 注册，补充 `GET /api/public/about/timeline` 与 `GET/POST/PUT/DELETE /api/admin/about/timeline(/:id)`。
+- about 页面：`app/about/page.tsx` 改为只读取 `/api/public/about/timeline`；`components/about/AboutPageClient.tsx` 按真实时间线数据分组渲染，不再使用本地 JSON 兜底。
+- about 后台：补齐 `时间线管理` 前端后台层，新增 `app/admin/about/timeline/page.tsx`、`lib/api/admin.ts` 的 timeline CRUD 封装，并在 `app/admin/layout.tsx` 增加菜单入口；保持 `about_timeline` 作为唯一数据模型，不新增独立“实习经历”资源。
+- 数据落库：使用 Homebrew MySQL 9 默认无密码 `root` 账号执行 `backend/migrations/20260613120000_about_timeline.sql` 与 `backend/migrations/seed_005_about_timeline.sql`，`about_timeline` 成功灌入 5 条记录。
+- 验证：`python3 -m py_compile app/main.py app/api/chat.py app/models/schemas.py app/auth.py app/tools/learning.py` 通过。
+- 验证：`python3 -c "import app.main; print('ok')"` 通过。
+- 验证：`go build ./...` 通过。
+- 验证：`npm run build` 通过。
+- 验证：真实发起一次 `/api/chat` 对话并拿到 `conversation_id=4`，随后 `GET /api/chat/history/4?limit=2` 返回用户+助手两条消息，分页结构正确。
+- 验证：`GET /api/public/about/timeline` 与 `GET /api/admin/about/timeline` 均返回 5 条时间线数据，字段映射与排序符合契约。
+- 运维修复：定位并修复 `public_skill` 表 4 条历史乱码数据（`熟练/掌握/类型系统` 等字段），确认问题源于早期入库编码错误而非 `/admin/skills` 页面渲染；修复后查库与 `GET /api/public/skills` 均恢复正常中文。
+
+### 当前阻塞
+- 无。
+
+### 关键决策
+- 超长历史默认只加载最近 100 条，避免首次进入对话时一次性渲染全部消息。
+- 更早消息通过 `before_id` 增量拉取，并在前端 prepend 到现有消息列表，避免整段历史重复请求。
+- 历史数据继续存储在 MySQL 的 `agent_conversation` / `agent_message` 表中，不引入额外缓存层。
+- about 时间线保持最小闭环：只补 timeline 这一块数据库化缺口，不顺手做聚合接口重构。
+- `timeline.json` 已彻底移除；前台 about 与 AI 知识库时间线均以后端接口为唯一真相源。
+
+### Gate E 状态
+- [x] `GET /api/chat/history/:conversation_id` 支持 `limit` / `before_id`
+- [x] 历史响应包含 `messages` / `hasMore` / `nextBeforeId`
+- [x] 新对话发送后可落库，并能通过历史接口回放验证
+- [x] 前端历史对话列表 / 回放 / 加载更早消息代码已接入并构建通过
+- [x] `GET /api/public/about/timeline` 返回 5 条时间线数据
+- [x] `GET /api/admin/about/timeline` 返回 5 条时间线数据
+- [x] `go build ./...` 通过
+- [x] `npm run build` 通过
+- [x] agent-service 导入与启动验证通过
+
+### Gate F 状态
+- [x] `progress-log.md` 已更新
+- [x] `pitfalls.md` 已补充 Python 版本兼容踩坑与 MySQL/旧进程踩坑
+- [x] 阶段 10 用户浏览器验收已通过
+
+### 明日第一步
+- 阶段 10 已完成；用户发起下一阶段时进入 REQUIREMENT。
+
+## 2026-06-17
+
+### 今日目标
+- 增强 AI 教练对“用户当前学习状况”的理解能力，避免只基于学习画像和目标生成通用计划。
+
+### 今日完成
+- 明确本闭环不引入多 Agent，不强依赖知识图谱；先用单 Learning Coach Agent + 聚合诊断工具完成最小体验提升。
+- Python agent-service 新增 `diagnose_current_state` 工具，聚合学习画像、学习目标、公开技能、学习计划、任务和近期进度。
+- Python agent-service 新增 `get_public_skills` 工具，让 AI 教练可读取已有结构化技能数据。
+- 更新 Learning Coach 系统提示词：制定学习计划前必须先做当前状态诊断；若数据缺失，只追问最少必要信息。
+
+### 当前阻塞
+- 知识图谱仍处于设计阶段，`knowledge_node / knowledge_edge` 表和接口尚未冻结，因此本闭环不接入知识图谱。
+
+### 关键决策
+- 当前版本采用“单 Agent 编排 + 多工具聚合”，避免过早拆多 Agent 带来上下文同步和调试成本。
+- 当前状态诊断输出应基于真实数据，优先覆盖“数据依据 / 已掌握 / 正在推进 / 卡点风险 / 目标差距 / 下一步建议”。
+
+### Gate E 状态
+- [x] `diagnose_current_state` 已注册为 Agent tool
+- [x] `get_public_skills` 已注册为 Agent tool
+- [x] agent-service 入口导入验证通过
+
+### Gate F 状态
+- [x] `progress-log.md` 已更新
+- [x] 本闭环无新增踩坑需写入 `pitfalls.md`
+
+## 2026-06-18
+
+### 今日目标
+- 为公开对话检索优化前建立模糊查询评测集，并跑当前向量检索 baseline。
+- 基于 baseline 问题，落地公开对话 Multi Query + RAG-Fusion 检索优化。
+
+### 今日完成
+- 新增 `docs/evals/public-chat-retrieval-fuzzy.json`，覆盖 profile / contact / skill / project / timeline / multi / negative 共 54 条模糊查询样本。
+- 新增 `scripts/evaluate-retrieval.js`，直接调用阿里云 `text-embedding-v1` 和 Supabase `match_knowledge`，评估当前公开对话向量检索 baseline。
+- `package.json` 新增 `npm run eval:retrieval`。
+- 运行 `npm run eval:retrieval -- --limit 5 --threshold 0` 完成 baseline：
+  - Hit@1：64.0%
+  - Hit@3：88.0%
+  - Hit@5：90.0%
+  - MRR：0.752
+  - WrongTypeRate：3.7%
+  - NegativePassRate：0.0%
+- 新增 `lib/ai/retrieval.ts` 作为公开对话统一检索入口，包含 intent 识别、Multi Query、RRF 融合、类型过滤/加权、去重、多意图多样性选择和 claim/no-answer 兜底。
+- `app/api/chat-simple/route.ts` 与 `app/api/chat/route.ts` 已切到统一检索入口。
+- `scripts/evaluate-retrieval.js` 增加 `--strategy baseline|fusion`，可对比优化前后策略。
+- 运行 `npm run eval:retrieval -- --strategy fusion --limit 5 --threshold 0` 完成优化后评测：
+  - Hit@1：98.0%
+  - Hit@3：100.0%
+  - Hit@5：100.0%
+  - MRR：0.990
+  - WrongTypeRate：0.0%
+  - NegativePassRate：100.0%
+
+### 当前阻塞
+- 本机 Go 后端 `localhost:8080` 未启动，因此本轮评测未依赖实时 Go API，只验证已入 Supabase 向量库的现有检索效果。
+
+### 关键决策
+- 检索优化前必须先保留 baseline，后续 Multi Query / RAG-Fusion / rerank 改动均用同一批样本对比。
+- 当前最大风险不是正样本完全召不回，而是 negative/no-answer 样本没有置信度兜底，低相关结果仍会进入上下文。
+- 多意图查询需要结果多样性约束，否则高分技能类 chunk 容易挤占项目 / 经历 / 联系方式。
+- 对“是不是 / 有没有 / 做过吗 / 毕业吗”等 claim 型问题，若检索结果不包含被问到的关键 claim term，则不向 prompt 注入上下文，避免模型基于弱相关资料发挥。
+
+### Gate E 状态
+- [x] 公开对话检索 baseline 已生成
+- [x] 模糊查询样本集已落库到文档目录
+- [x] 评测脚本可通过 npm script 复跑
+- [x] Multi Query + RAG-Fusion 已接入公开对话入口
+- [x] 优化后检索评测达到 Hit@5 100% / NegativePassRate 100%
+
+### Gate F 状态
+- [x] `progress-log.md` 已更新
+- [x] 本闭环无新增踩坑需写入 `pitfalls.md`
+
+## 2026-06-18（RAG 评测增强）
+
+### 今日目标
+- 补齐公开对话 RAG 的检索 + 生成联合评估脚手架，让简历中的“RAGAS + Hit/MRR + 参数对比”有工程产物支撑。
+
+### 今日完成
+- 扩展 `scripts/evaluate-retrieval.js`：新增 `--rerank rule|none` 和 `--include-content`，便于实验矩阵对比本地规则重排开关，并把 retrieved contexts 传给生成评估。
+- 新增 `docs/evals/public-chat-ragas.json`：端到端生成评估样本，覆盖 profile / contact / skill / project / timeline / multi / negative。
+- 新增 `scripts/evaluate-ragas.py`：读取 RAGAS 样本与检索结果，按 `user_input / retrieved_contexts / response / reference` 组织数据，调用 RAGAS 的 faithfulness / answer_relevancy / context_precision / context_recall 等指标；依赖缺失时输出 skipped 报告和安装提示。
+- 新增 `scripts/run-rag-experiments.js`：按 strategy / topK / threshold / rerank 组合运行检索评估与 RAGAS 评估，并输出 JSON + Markdown 报告到 `docs/evals/results/`。
+- `package.json` 新增 `npm run eval:ragas` 与 `npm run eval:rag-experiments`。
+
+### 当前阻塞
+- chunk strategy 对比还未实现，因为需要按 `business / field / fixed_size` 重建向量库或建立多套索引；本轮仅把该维度写入实验报告说明，避免伪造切分策略对比。
+- 当前 RAGAS `context_recall` 为 0.000，主要因为 `reference` 更像评分依据而非标准事实答案，后续需要把 RAGAS 样本 reference 调整成可召回的事实答案。
+
+### 关键决策
+- 保留现有 Node 检索评估作为 Hit@K / MRR 权威来源，不重写为 Python。
+- RAGAS 评估独立为 Python 脚本，只负责生成质量指标，避免把检索链路和生成指标耦合在一个脚本里。
+- 实验矩阵第一版聚焦可立即复跑的维度：`baseline|fusion|llm-fusion`、`topK`、`threshold`、`rerank rule|none`。
+
+### 验收结果
+- `node --check scripts/evaluate-retrieval.js` 通过。
+- `node --check scripts/run-rag-experiments.js` 通过。
+- `python3 -m py_compile scripts/evaluate-ragas.py` 通过（需写入系统 Python cache，已按权限执行）。
+- `npm run eval:retrieval -- --strategy fusion --limit 5 --threshold 0` 真实网络链路通过：
+  - Hit@1：98.0%
+  - Hit@3：100.0%
+  - Hit@5：100.0%
+  - MRR：0.990
+  - WrongTypeRate：0.0%
+  - NegativePassRate：100.0%
+- 已安装并验证 `ragas 0.4.3` / `datasets 4.5.0`；agent-service 导入仍通过。
+- `npm run eval:ragas -- --max-cases 3 --output docs/evals/results/ragas-smoke-real.json` 真实 RAGAS 评估通过：
+  - faithfulness：1.000
+  - answer_relevancy：0.281
+  - context_precision：0.733
+  - context_recall：0.000
+- `npm run eval:rag-experiments -- --max-cases 3 --strategies fusion --limits 3 --thresholds 0` 通过，已生成 `docs/evals/results/rag-experiments-20260618-172156.md` 与对应 JSON。该报告包含：
+  - Hit@1：100.0%
+  - Hit@3：100.0%
+  - MRR：1.000
+  - faithfulness：0.857
+  - answer_relevancy：0.313
+  - context_precision：0.667
+  - context_recall：0.000
+
+### Gate E 状态
+- [x] 检索评估支持 Hit@K / MRR 与实验参数导出。
+- [x] RAGAS 生成评估脚本已接入样本、上下文、回答和 reference 数据结构。
+- [x] 实验矩阵可量化对比召回参数与本地重排开关。
+- [x] 报告文件可落盘到 `docs/evals/results/`。
+- [x] RAGAS 真实分数已通过 3 条 smoke 样本产出。
+- [ ] 切分策略量化对比待多套 chunk/index 准备后接入。
+
+### Gate F 状态
+- [x] `progress-log.md` 已更新
+- [x] 本闭环无新增踩坑需写入 `pitfalls.md`

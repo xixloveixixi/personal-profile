@@ -274,7 +274,7 @@ export default function PlanTasksPage() {
           <Descriptions title={<Typography.Title level={4}>{plan.title}</Typography.Title>} column={3}>
             <Descriptions.Item label="状态">
               <Tag color={plan.status === 'active' ? 'green' : plan.status === 'completed' ? 'blue' : 'orange'}>
-                {plan.status === 'draft' ? '草稿' : plan.status === 'active' ? '进行中' : plan.status === 'completed' ? '已完成' : plan.status}
+                {plan.status === 'draft' ? '待开始' : plan.status === 'active' ? '进行中' : plan.status === 'completed' ? '已完成' : plan.status}
               </Tag>
             </Descriptions.Item>
             <Descriptions.Item label="来源">
@@ -310,6 +310,9 @@ export default function PlanTasksPage() {
           dataSource={tasks}
           loading={loading}
           pagination={{ pageSize: 20 }}
+          locale={{
+            emptyText: '当前计划还没有任务，先新增任务再开始执行。',
+          }}
         />
       </Card>
 

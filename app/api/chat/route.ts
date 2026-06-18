@@ -1,4 +1,4 @@
-import { searchSimilarVectors } from '@/lib/ai/vector-store'
+import { retrieveAnswerContext } from '@/lib/ai/retrieval'
 
 // 环境变量检查
 function checkEnvVars() {
@@ -26,17 +26,14 @@ export async function POST(req: Request) {
     // 1. 向量检索相关上下文
     let context = ''
     try {
-      const similarChunks = await searchSimilarVectors(userMessage, 10)
-      console.log(`[Chat API] 找到 ${similarChunks.length} 个相关chunks`)
-      similarChunks.forEach((chunk, i) => {
-        console.log(`  [${i}] ${chunk.metadata.title || chunk.metadata.type} (相似度: ${chunk.similarity?.toFixed(3) || 'N/A'})`)
+      const retrieval = await retrieveAnswerContext(userMessage, { limit: 8 })
+      context = retrieval.context
+      console.log(
+        `[Chat API] planner=${retrieval.debug.planner} intent=${retrieval.debug.intent} chunks=${retrieval.results.length} shouldAnswer=${retrieval.shouldAnswer} blockReason=${retrieval.debug.blockReason || '-'}`,
+      )
+      retrieval.results.forEach((chunk, i) => {
+        console.log(`  [${i}] ${chunk.metadata.title || chunk.metadata.type} (score: ${(chunk.score ?? chunk.similarity)?.toFixed(3) || 'N/A'})`)
       })
-      
-      if (similarChunks.length > 0) {
-        context = similarChunks
-          .map((chunk) => `[来源: ${chunk.metadata.title || chunk.metadata.type}]\n${chunk.content}`)
-          .join('\n\n---\n\n')
-      }
     } catch (error) {
       console.error('Vector search error:', error)
     }

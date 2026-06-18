@@ -1,9 +1,9 @@
 # 研发 Harness 踩坑记录
 ## 索引
-- 流程类：范围控制、学习发散、文档同步、阶段切换标题、Gate C 勾选权、多 Track 当前阶段游标、subagent 漏路由注册
+- 流程类：范围控制、学习发散、文档同步、阶段切换标题、Gate C 勾选权、多 Track 当前阶段游标、subagent 漏路由注册、全局接线漏检
 - Go 工程：go.mod 位置、GOPROXY、response 包
 - 工具链：进入新栈前置检查、MySQL formula 版本、前后端开发端口 CORS、MySQL 中文编码、Next.js middleware 缓存
-- 前后端联调：API 响应字段命名风格变更、iconMap 大小写不匹配
+- 前后端联调：API 响应字段命名风格变更、iconMap 大小写不匹配、camelCase 与 snake_case 契约不一致、伪流式 SSE、Python 类型语法与运行时版本不兼容
 - Antd：Modal destroyOnClose 导致 setFieldsValue 失效
 
 ## 使用原则
@@ -245,6 +245,87 @@ const contacts = await getPublicContacts().catch(() => [])
 ### 下次如何避免
 
 公开展示页的 API 调用一律加降级默认值，后端挂了不应影响页面基本可访问性。只有"无数据则页面无意义"的场景才允许让错误冒泡到 error boundary。
+
+## 全局接线漏检：功能文件写了但入口未注册
+
+### 场景
+
+阶段 9 中，`/admin/learning/chat` 页面文件和 agent 对话相关 handler / repo 已经落地，但浏览器侧左侧菜单没有 `AI 教练` 入口，同时 Go 侧 `/api/private/agent/conversations` 初次联调返回 404。
+
+### 原因
+
+实现时过度相信 subagent 的“已完成”结果，只检查了功能文件本身是否存在，没有把 `app/admin/layout.tsx` 和 `backend/internal/router/router.go` 这类全局入口文件当成必查验收项。
+
+### 解决方案
+
+新增页面后，必须同步检查后台菜单注册；新增接口后，必须同步检查 router 注册，并用实际运行结果验证，而不是只看代码文件存在。
+
+### 下次如何避免
+
+每次新增以下能力后都执行“全局接线检查”：
+- 新页面 → 检查 `app/admin/layout.tsx`
+- 新接口 → 检查 `backend/internal/router/router.go`
+- 新能力 → 用浏览器 / curl 实测入口是否可达
+
+## 前后端契约字段命名不一致：`goalId` vs `goal_id`
+
+### 场景
+
+阶段 9 联调时，Go 代理 `POST /api/private/learning/plans/generate` 已经正确转发到 Python agent-service，但 Python `generate/plan` 接口返回 422，因为请求体使用 `goalId`，而 Python Pydantic schema 只接受 `goal_id`。
+
+### 原因
+
+前端 / Go 侧沿用 camelCase 契约，Python schema 按 snake_case 定义，双方没有在接口层做兼容。
+
+### 解决方案
+
+在 Python `GeneratePlanRequest` schema 上为 `goal_id` 增加 `goalId` 别名兼容，避免为了单个字段改动整条调用链。
+
+### 下次如何避免
+
+涉及跨语言接口（TS/Go/Python）时，冻结契约后必须在联调前逐个核对：
+- 字段名风格（camelCase / snake_case）
+- 必填 / 选填
+- 错误码与错误体
+
+## 伪流式 SSE：接口是 SSE，但用户感知仍然“一次性输出”
+
+### 场景
+
+阶段 9 浏览器验收时，`/api/chat` 已返回 `text/event-stream`，但用户观察到回复并不是逐步出现，而是“一下子就输出”，体验上不像流式。
+
+### 原因
+
+后端虽然用了 `StreamingResponse`，但内部先 `agent.invoke(...)` 完整生成最终结果，再统一 `yield`，本质上只是“用 SSE 包了一次性结果”，不是真正的生成中流式。
+
+### 解决方案
+
+先将最终回复拆成小块分段输出，修复用户可见的流式体验；后续如果继续优化，再把 LLM / LangGraph 改为真正的 token 级流式事件链。
+
+### 下次如何避免
+
+验收“流式输出”时不要只看响应头或接口协议，要直接在浏览器里确认：
+- 文本是否逐段出现
+- 首 token 延迟是否明显短于整段完成时间
+- 用户感知是否真的是流式
+
+## Markdown 原样展示导致大量 `*` 号
+
+### 场景
+
+阶段 9 浏览器验收时，AI 教练回复已经有内容，但因为模型返回的是 Markdown，前端按纯文本渲染，导致 `**加粗**`、列表等格式原样显示成很多 `*` 号。
+
+### 原因
+
+首版聊天 UI 为了快速闭环只做了纯文本展示，没有按 assistant 消息类型区分 Markdown 渲染。
+
+### 解决方案
+
+对 assistant 消息使用 `react-markdown` 渲染，用户消息仍保留纯文本显示。
+
+### 下次如何避免
+
+凡是 LLM 直接产出的自然语言内容，默认按 Markdown 能力设计展示；除非明确只允许纯文本，否则不要直接裸渲染字符串。
 
 ## Next.js 博客页构建时调用 Notion API 失败
 
@@ -495,3 +576,92 @@ rm -rf .next && npm run dev
 ```
 
 如果连续两次验收都报 middleware 错误，首先怀疑缓存问题而非代码问题。
+
+## Python 类型语法与运行时版本不兼容
+
+### 场景
+
+阶段 10 为历史分页接口添加 `before_id` 参数时，代码写成了 `before_id: int | None = Query(...)`。`py_compile` 可以通过，但 agent-service 在本机 Python 3.9 环境导入 `app.main` 时直接报错，导致 `uvicorn` 无法启动，历史接口验收卡住。
+
+### 原因
+
+`int | None` 是 Python 3.10+ 的 PEP 604 语法；当前本地运行时是 Python 3.9。仅做语法编译不足以覆盖“模块导入时执行类型注解”的兼容性问题，因此出现了“编译通过但服务启动失败”的假象。
+
+### 解决方案
+
+- 将参数改为 `Optional[int]`，并补充 `from typing import Optional`。
+- 在验收中增加 `python3 -c "import app.main; print('ok')"`，确保不仅源码可编译，而且应用入口可在当前解释器版本下成功导入。
+
+### 下次如何避免
+
+- 写 Python 类型注解前先确认项目运行时版本，不要默认使用 3.10+ 语法。
+- 对 FastAPI / Pydantic 项目，除了 `py_compile`，还要至少做一次“入口 import 验证”或直接启动服务验证。
+- 只要改动发生在模块顶层定义（路由、schema、settings、类型注解），就把“能否 import app.main”视为必跑检查项。
+
+## Homebrew MySQL 9 默认 root 无密码，旧文档密码会误导排障
+
+### 场景
+
+补跑 `about_timeline` migration / seed 时，先按文档中的 `pp_app / pp_dev_pwd` 与 `root / root_pwd` 尝试登录，均返回 `Access denied`。一度误以为用户改过密码或数据实例不一致，导致数据库落库验收卡住。
+
+### 原因
+
+当前机器实际运行的是 Homebrew `mysql 9.6`，`brew info mysql` 明确说明默认安装后的 root 用户**没有密码**，可直接 `mysql -u root` 登录。项目文档中的历史凭据来自更早阶段的业务账号 / docker 方案，与当前本机实例不一致。
+
+### 解决方案
+
+- 先用 `brew info mysql` 确认当前安装模型，再用 `mysql -u root` 实测登录。
+- 使用无密码 root 执行 `about_timeline` 的 migration 与 seed，确认表存在且共有 5 条记录。
+
+### 下次如何避免
+
+- 当文档里的 MySQL 密码失效时，先确认当前跑的是哪套实例（Homebrew、本机 datadir、Docker），不要默认是“密码被改了”。
+- Homebrew MySQL 9 首次排障时优先尝试 `mysql -u root`，再决定是否需要重置业务账号。
+- `progress-log.md` 中记录凭据时同时标注“适用实例来源”（docker / Homebrew / 远端）。
+
+## 删除静态 JSON 前要先检查是否还承担“兜底数据源”职责
+
+### 场景
+
+about 时间线已经完成数据库化，但首轮清理时只看到了 `timeline.json` 被前台页面和 AI 知识库引用，容易直接删文件。若不先把 `/about` 页 fallback 和 `knowledge-base` 的静态 import 一起切到后端接口，删除文件后会立即触发运行时/构建错误。
+
+### 原因
+
+静态 JSON 在迁移后可能不再是“主数据源”，但仍暂时承担两类职责：
+- 页面失败兜底
+- 内部脚本 / 知识库构建输入
+
+如果只按“主链路已切 API”判断，就会漏掉这些残余依赖。
+
+### 解决方案
+
+- 先全局搜索 `timeline.json` 与相关读取工具函数。
+- 先把所有业务引用切到后端接口，再删除静态文件。
+- 删除后必须至少跑一次构建，确认没有遗留类型/导入依赖。
+
+### 下次如何避免
+
+- 删除任何静态数据文件前，先区分它是“主数据源”“fallback”还是“脚本输入”。
+- 对残余引用执行一次全局 grep，而不是只看页面入口。
+- 把“删文件后重跑 build”视为必做验收，而不是可选项。
+
+## 旧后端进程仍占用 8080，会把新路由误判成未实现
+
+### 场景
+
+`about_timeline` 代码、router 注册和 `go build ./...` 都已完成，但访问 `GET /api/public/about/timeline` 仍然返回 404。最初看起来像是路由没注册，实际是 8080 端口上仍跑着旧的 Go 编译产物。
+
+### 原因
+
+开发时直接运行过旧的 `go run` 产物，新的代码虽然已经编译通过，但服务进程没重启，导致线上行为仍然来自旧版本二进制。
+
+### 解决方案
+
+- 用 `lsof -ti:8080` 和 `ps -p <pid> -o command=` 确认端口占用进程。
+- 杀掉旧进程后重新 `go run ./cmd/server`，再从启动日志里确认新路由确实已注册。
+
+### 下次如何避免
+
+- 新增路由后，先看启动日志里是否出现对应路径，再做 curl 验收。
+- 如果代码里明明注册了路由但接口仍返回 404，优先怀疑“旧进程未重启”，不要先怀疑实现本身。
+- 把“查看启动日志中的路由清单”纳入后端 Gate E 验收习惯动作。

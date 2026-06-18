@@ -1,4 +1,4 @@
-import { buildKnowledgeBase, splitIntoChunks } from '@/lib/ai/knowledge-base'
+import { buildPublicKnowledgeChunks, loadPublicKnowledgeData } from '@/lib/ai/public-knowledge'
 import { storeVectors, clearAllVectors } from '@/lib/ai/vector-store'
 import { NextResponse } from 'next/server'
 
@@ -16,23 +16,25 @@ async function initKnowledge() {
       // 继续执行，不影响初始化
     }
     
-    // 1. 构建知识库内容
-    const chunks = await buildKnowledgeBase()
-    console.log(`✓ 收集到 ${chunks.length} 个知识块`)
+    // 1. 从后台公开接口读取数据，并构建动态语义分块
+    const publicData = await loadPublicKnowledgeData()
+    const chunks = buildPublicKnowledgeChunks(publicData)
+    console.log(`✓ 基于后台公开数据生成 ${chunks.length} 个动态知识块`)
 
     if (chunks.length === 0) {
-      throw new Error('没有收集到任何知识库内容，请检查数据源')
+      throw new Error('没有收集到任何公开知识块，请检查后台公开数据接口')
     }
 
-    // 2. 分割成更小的chunks
-    const splitChunks = splitIntoChunks(chunks, 500)
-    console.log(`✓ 分割后共 ${splitChunks.length} 个chunks`)
-
-    // 3. 转换为向量并存储
-    const vectorChunks = splitChunks.map((chunk) => ({
+    // 2. 转换为向量存储输入。这里保留语义分块，不再统一按字符数机械切分。
+    const vectorChunks = chunks.map((chunk) => ({
       id: chunk.id,
       content: chunk.content,
-      metadata: chunk.metadata,
+      metadata: {
+        type: chunk.type,
+        title: chunk.title,
+        source: chunk.source,
+        ...(chunk.metadata ?? {}),
+      },
     }))
 
     // 检查是否跳过向量生成
@@ -53,27 +55,26 @@ async function initKnowledge() {
       
       return {
         success: true,
-        message: `知识库初始化完成！共存储 ${vectorChunks.length} 个文本块（未生成向量）`,
-        warning: '向量生成已跳过，聊天功能可能无法使用向量检索',
+        message: `动态公开知识库初始化完成！共存储 ${vectorChunks.length} 个文本块（未生成向量）`,
+        warning: '向量生成已跳过，聊天功能将回退到动态关键词检索',
         stats: {
           totalChunks: chunks.length,
           totalVectors: vectorChunks.length,
           byType: chunks.reduce((acc, chunk) => {
-            const type = chunk.metadata.type
-            acc[type] = (acc[type] || 0) + 1
+            acc[chunk.type] = (acc[chunk.type] || 0) + 1
             return acc
           }, {} as Record<string, number>),
         },
       }
     }
 
-    console.log('开始存储向量到数据库...')
+    console.log('开始存储动态公开知识向量到数据库...')
     const storageStats = await storeVectors(vectorChunks)
-    console.log('✓ 知识库初始化完成！')
+    console.log('✓ 动态公开知识库初始化完成！')
 
     return {
       success: true,
-      message: `知识库初始化完成！共存储 ${storageStats.stored}/${storageStats.generated} 个向量`,
+      message: `动态公开知识库初始化完成！共存储 ${storageStats.stored}/${storageStats.generated} 个向量`,
       stats: {
         totalChunks: chunks.length,
         totalVectors: vectorChunks.length,
@@ -82,8 +83,7 @@ async function initKnowledge() {
         failedGeneration: storageStats.failedGeneration,
         failedStorage: storageStats.failedStorage,
         byType: chunks.reduce((acc, chunk) => {
-          const type = chunk.metadata.type
-          acc[type] = (acc[type] || 0) + 1
+          acc[chunk.type] = (acc[chunk.type] || 0) + 1
           return acc
         }, {} as Record<string, number>),
       },

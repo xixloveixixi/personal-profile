@@ -37,6 +37,30 @@ func NewLearningPlanHandler(
 	}
 }
 
+func (h *LearningPlanHandler) syncPlanStatus(planID uint64) {
+	plan, err := h.planRepo.FindByID(planID)
+	if err != nil {
+		return
+	}
+
+	nextStatus := plan.Status
+	switch {
+	case plan.TotalTasks > 0 && plan.CompletedTasks >= plan.TotalTasks:
+		nextStatus = "completed"
+	case plan.CompletedTasks > 0:
+		nextStatus = "active"
+	case plan.TotalTasks > 0 && plan.Status == "completed":
+		nextStatus = "active"
+	}
+
+	if nextStatus == plan.Status {
+		return
+	}
+
+	plan.Status = nextStatus
+	_ = h.planRepo.Update(plan)
+}
+
 // ==================== Plan DTOs ====================
 
 type learningPlanDTO struct {
@@ -395,6 +419,12 @@ func (h *LearningPlanHandler) CreateTask(c *gin.Context) {
 	}
 	// 更新计划的任务总数
 	_ = h.planRepo.IncrementTotalTasks(planID)
+	if task.Status == "completed" {
+		now := time.Now()
+		task.CompletedAt = &now
+		_ = h.planRepo.IncrementCompletedTasks(planID)
+	}
+	h.syncPlanStatus(planID)
 
 	OK(c, toLearningTaskDTO(task))
 }
@@ -454,6 +484,7 @@ func (h *LearningPlanHandler) UpdateTask(c *gin.Context) {
 		Fail(c, http.StatusInternalServerError, 50000, "更新失败")
 		return
 	}
+	h.syncPlanStatus(task.PlanID)
 	OK(c, toLearningTaskDTO(task))
 }
 
@@ -490,6 +521,7 @@ func (h *LearningPlanHandler) DeleteTask(c *gin.Context) {
 	if wasCompleted {
 		_ = h.planRepo.DecrementCompletedTasks(planID)
 	}
+	h.syncPlanStatus(planID)
 
 	OK(c, gin.H{"id": id})
 }

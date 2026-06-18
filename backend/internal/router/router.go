@@ -56,6 +56,10 @@ func Setup(r *gin.Engine, db *gorm.DB) {
 	projectRepo := repository.NewPortfolioProjectRepo(db)
 	projectHandler := handler.NewProjectHandler(projectRepo)
 
+	// -- about_timeline --
+	timelineRepo := repository.NewAboutTimelineRepo(db)
+	timelineHandler := handler.NewAboutTimelineHandler(timelineRepo)
+
 	public := api.Group("/public")
 	public.GET("/profile", profileHandler.GetPublic)
 	public.GET("/contacts", contactHandler.GetPublicContacts)
@@ -63,6 +67,7 @@ func Setup(r *gin.Engine, db *gorm.DB) {
 	public.GET("/site-config", siteConfigHandler.GetPublicSiteConfig)
 	public.GET("/projects", projectHandler.GetPublicProjects)
 	public.GET("/projects/:slug", projectHandler.GetProjectBySlug)
+	public.GET("/about/timeline", timelineHandler.GetPublicTimeline)
 
 	admin := api.Group("/admin")
 	admin.Use(middleware.Auth(), middleware.RequireOwnerRole())
@@ -82,6 +87,10 @@ func Setup(r *gin.Engine, db *gorm.DB) {
 	admin.POST("/projects", projectHandler.CreateProject)
 	admin.PUT("/projects/:id", projectHandler.UpdateProject)
 	admin.DELETE("/projects/:id", projectHandler.DeleteProject)
+	admin.GET("/about/timeline", timelineHandler.GetAdminTimeline)
+	admin.POST("/about/timeline", timelineHandler.CreateTimeline)
+	admin.PUT("/about/timeline/:id", timelineHandler.UpdateTimeline)
+	admin.DELETE("/about/timeline/:id", timelineHandler.DeleteTimeline)
 
 	// 健康检查统计
 	healthStatsHandler := handler.NewHealthStatsHandler(healthLogRepo)
@@ -101,6 +110,11 @@ func Setup(r *gin.Engine, db *gorm.DB) {
 		learningPlanRepo, learningTaskRepo, learningProgressRepo, learningGoalRepo, learningProfileRepo,
 	)
 
+	// Stage 9 Agent 对话
+	agentConversationRepo := repository.NewAgentConversationRepo(db)
+	agentMessageRepo := repository.NewAgentMessageRepo(db)
+	agentConversationHandler := handler.NewAgentConversationHandler(agentConversationRepo, agentMessageRepo)
+
 	privateGroup := api.Group("/private")
 	privateGroup.Use(middleware.Auth(), middleware.RequireOwnerRole())
 	privateGroup.GET("/learning/profile", learningProfileHandler.GetLearningProfile)
@@ -115,11 +129,14 @@ func Setup(r *gin.Engine, db *gorm.DB) {
 	privateGroup.POST("/learning/plans", learningPlanHandler.CreatePlan)
 	privateGroup.PUT("/learning/plans/:id", learningPlanHandler.UpdatePlan)
 	privateGroup.DELETE("/learning/plans/:id", learningPlanHandler.DeletePlan)
-	privateGroup.POST("/learning/plans/generate", learningPlanHandler.GeneratePlan)
+	privateGroup.POST("/learning/plans/generate", handler.ProxyGeneratePlan)
 	privateGroup.GET("/learning/plans/:planId/tasks", learningPlanHandler.GetTasks)
 	privateGroup.POST("/learning/plans/:planId/tasks", learningPlanHandler.CreateTask)
 	privateGroup.PUT("/learning/tasks/:id", learningPlanHandler.UpdateTask)
 	privateGroup.DELETE("/learning/tasks/:id", learningPlanHandler.DeleteTask)
 	privateGroup.GET("/learning/tasks/:taskId/progress", learningPlanHandler.GetProgress)
 	privateGroup.POST("/learning/tasks/:taskId/progress", learningPlanHandler.CreateProgress)
+
+	privateGroup.GET("/agent/conversations", agentConversationHandler.GetConversations)
+	privateGroup.DELETE("/agent/conversations/:id", agentConversationHandler.DeleteConversation)
 }

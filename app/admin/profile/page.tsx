@@ -109,13 +109,23 @@ export default function AdminProfilePage() {
     <main className="min-h-screen bg-slate-50 px-6 py-8">
       <div className="mx-auto max-w-4xl">
         <Space direction="vertical" size="large" className="w-full">
-          <div>
-            <Title level={2} className="!mb-2">
-              个人信息管理
-            </Title>
-            <Paragraph className="!mb-0 text-slate-600">
-              编辑公开页展示的个人资料，保存后会同步写入后台 profile 接口。
-            </Paragraph>
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div>
+              <Title level={2} className="!mb-2">
+                个人信息管理
+              </Title>
+              <Paragraph className="!mb-0 text-slate-600">
+                编辑公开页展示的个人资料，保存后会同步写入后台 profile 接口。
+              </Paragraph>
+            </div>
+            <Space wrap>
+              <Button type="primary" htmlType="submit" form="admin-profile-form" loading={saving} disabled={loading}>
+                保存
+              </Button>
+              <Button onClick={() => void loadProfile()} disabled={loading || saving}>
+                重新加载
+              </Button>
+            </Space>
           </div>
 
           {errorMessage ? (
@@ -135,6 +145,7 @@ export default function AdminProfilePage() {
           <Card>
             <Spin spinning={loading} tip="正在加载个人信息...">
               <Form<AdminProfilePayload>
+                id="admin-profile-form"
                 form={form}
                 layout="vertical"
                 initialValues={defaultProfileValues}
@@ -184,28 +195,8 @@ export default function AdminProfilePage() {
                   <Input placeholder="例如：前端 Agent 工程师" />
                 </Form.Item>
 
-                <Form.Item
-                  label="所在地"
-                  name="location"
-                  rules={[{ max: 128, message: '所在地不能超过 128 个字符' }]}
-                >
-                  <Input placeholder="例如：Beijing" />
-                </Form.Item>
-
-                <Form.Item label="可见性" name="visibility">
-                  <Select options={visibilityOptions} />
-                </Form.Item>
-
-                <Form.Item className="!mb-0">
-                  <Space wrap>
-                    <Button type="primary" htmlType="submit" loading={saving} disabled={loading}>
-                      保存
-                    </Button>
-                    <Button onClick={() => void loadProfile()} disabled={loading || saving}>
-                      重新加载
-                    </Button>
-                    {profile?.id ? <Text type="secondary">当前记录 ID：{profile.id}</Text> : null}
-                  </Space>
+                <Form.Item>
+                  {profile?.id ? <Text type="secondary">当前记录 ID：{profile.id}</Text> : null}
                 </Form.Item>
               </Form>
             </Spin>
