@@ -1,67 +1,67 @@
-# Daily Notion Calendar Design
+# Daily Notion 日历设计
 
-## Background
+## 背景
 
-The site needs a lightweight "daily thoughts" module for short personal notes. The content should be easy to publish frequently and should use Notion as the writing backend, not the Go/MySQL admin CRUD stack.
+站点需要新增一个轻量的「碎碎念」模块，用来记录每天的短想法、牢骚或情绪片段。这个内容会高频发布，写作入口应该足够自然，因此数据源选择 Notion，而不是 Go/MySQL 后台 CRUD。
 
-This design adds a public `Daily` page backed by a separate Notion database. It does not change the existing Notion blog database and does not migrate blog content.
+本设计新增一个公开的 `Daily` 页面，数据来自独立的 Notion Daily 数据库。该设计不改动现有 Notion 博客数据库，也不迁移博客内容。
 
-## Goals
+## 目标
 
-- Add a public `/daily` page with a calendar plus selected-day detail layout.
-- Use a dedicated Notion Daily database as the only content source.
-- Keep entries public by default, while supporting a Notion checkbox to hide individual entries.
-- Support one entry per day in the first version.
-- Render entry body content from the Notion page body.
-- Keep the first version text-only: no images, comments, reactions, or tag filtering.
+- 新增公开页面 `/daily`，展示形式为「日历 + 当日详情」。
+- 使用独立 Notion Daily 数据库作为唯一内容源。
+- 内容默认公开，同时支持通过 Notion checkbox 隐藏单条记录。
+- 第一版约束为每天最多一条记录。
+- 正文从 Notion 页面正文读取和渲染。
+- 第一版只做纯文字内容，不做图片、评论、点赞、标签筛选。
 
-## Non-Goals
+## 非目标
 
-- Do not add Go backend handlers, GORM models, migrations, or MySQL tables.
-- Do not build an admin CRUD UI for Daily entries.
-- Do not reuse the existing blog Notion database.
-- Do not add RSS, search, tag filtering, or archive pages in the first version.
-- Do not change the Notion blog sync behavior.
+- 不新增 Go backend handler、GORM model、migration 或 MySQL 表。
+- 不做 Daily 的后台 CRUD UI。
+- 不复用现有博客 Notion 数据库。
+- 第一版不做 RSS、搜索、标签筛选或归档页。
+- 不改变现有 Notion 博客同步逻辑。
 
-## User Experience
+## 用户体验
 
-The public navigation adds a `Daily` item pointing to `/daily`.
+公开导航新增 `Daily`，指向 `/daily`。
 
-The `/daily` page uses a calendar plus detail layout:
+`/daily` 页面使用「日历 + 详情」布局：
 
-- The calendar shows the current selected month.
-- Dates with a published Daily entry are visually marked.
-- The page defaults to the most recent published Daily entry.
-- Selecting another marked date updates the detail panel.
-- Selecting an empty date keeps the calendar interaction lightweight and shows an empty state for that day.
-- The detail panel shows title, date, tags, and the rendered Notion page body.
+- 日历展示当前选中月份。
+- 有公开 Daily 记录的日期需要有可识别标记。
+- 页面默认选中最近一条公开记录所在日期。
+- 点击其他有记录的日期后，详情区域切换到对应内容。
+- 点击没有记录的日期时不报错，详情区域展示该日暂无内容的空状态。
+- 详情区域展示标题、日期、标签和 Notion 页面正文。
 
-The page should follow the current public site style: dark page background, white text, subtle translucent surfaces, and compact rounded corners consistent with the existing UI.
+视觉风格沿用当前公开站点：深色背景、白色文字、半透明边框和克制的圆角，不单独引入新的视觉体系。
 
-## Notion Database
+## Notion 数据库
 
-Daily uses a dedicated Notion database configured by:
+Daily 使用独立 Notion 数据库，通过环境变量配置：
 
 ```env
 NOTION_DAILY_DATABASE_ID=<daily database id>
 ```
 
-`NOTION_TOKEN` is reused from the existing Notion integration.
+`NOTION_TOKEN` 继续复用现有 Notion integration token。
 
-Required properties:
+必需字段：
 
-| Property | Type | Purpose |
+| 字段 | 类型 | 用途 |
 | --- | --- | --- |
-| `标题` | Title | Entry title. |
-| `日期` | Date | Calendar date and sorting key. |
-| `标签` | Multi-select | Optional mood/topic badges. |
-| `公开` | Checkbox | Only checked entries are shown publicly. |
+| `标题` | Title | 碎碎念标题 |
+| `日期` | Date | 日历定位和排序依据 |
+| `标签` | Multi-select | 可选的心情 / 主题 badge |
+| `公开` | Checkbox | 只有勾选的记录展示在公开页 |
 
-The entry body lives in the Notion page body, not in a rich-text property. This keeps writing natural and avoids length constraints.
+正文写在 Notion 页面正文中，不放在单独的 rich text 属性里。这样写作体验更接近日记，也避免属性长度限制。
 
-## Data Model
+## 数据模型
 
-Frontend type:
+前端类型：
 
 ```ts
 export interface NotionDailyEntry {
@@ -73,56 +73,56 @@ export interface NotionDailyEntry {
 }
 ```
 
-Only entries with `isPublic === true` and a valid `date` should appear in the calendar.
+只有 `isPublic === true` 且 `date` 有效的记录会进入日历。
 
-If multiple public entries accidentally share the same date, the UI should keep one deterministic entry for that date. The first implementation can choose the newest Notion page returned after date-desc sorting, while the product rule remains "one entry per day".
+如果 Notion 中意外出现同一天多条公开记录，UI 需要保持确定性：第一版可以在按日期倒序排序后选择其中一条展示，但产品规则仍然是「每天最多一条」。
 
-## Architecture
+## 架构设计
 
-`lib/notion.ts` should keep existing blog behavior intact and add Daily-specific read functions:
+`lib/notion.ts` 保持现有博客行为不变，在此基础上新增 Daily 专用读取函数：
 
-- `getPublishedDailyEntries()`: query the Daily database, map properties, filter public entries, sort by date descending.
-- `getDailyEntryBlocks(pageId)`: retrieve the selected entry body blocks for rendering.
+- `getPublishedDailyEntries()`：查询 Daily 数据库，映射字段，过滤公开记录，按日期倒序排序。
+- `getDailyEntryBlocks(pageId)`：读取选中记录的 Notion 页面正文 blocks，用于详情渲染。
 
-The Notion query helper should accept a database ID parameter instead of relying only on the blog `NOTION_DATABASE_ID`. Existing blog functions continue to use `NOTION_DATABASE_ID`; Daily functions use `NOTION_DAILY_DATABASE_ID`.
+Notion 查询 helper 需要支持传入 database id，不能只依赖博客使用的 `NOTION_DATABASE_ID`。现有博客函数继续使用 `NOTION_DATABASE_ID`，Daily 函数使用 `NOTION_DAILY_DATABASE_ID`。
 
-The `/daily` route should catch Notion errors and render an empty state rather than crashing the public page.
+`/daily` 路由需要捕获 Notion 错误并展示空状态，不能让公开页面崩溃。
 
-## Frontend Components
+## 前端组件
 
-Add:
+新增：
 
-- `app/daily/page.tsx`: Server Component, fetches published Daily entries and passes them to the client component.
-- `app/daily/DailyClient.tsx`: Client Component for month navigation, date selection, calendar grid, and detail state.
+- `app/daily/page.tsx`：Server Component，拉取公开 Daily 列表并传给客户端组件。
+- `app/daily/DailyClient.tsx`：Client Component，负责月份切换、日期选择、日历格子和详情状态。
 
-Reuse where practical:
+复用：
 
-- Existing Notion block rendering components for page body rendering.
-- Existing layout/navigation conventions.
+- 现有 Notion block renderer，用于渲染页面正文。
+- 现有布局和导航约定。
 
-No new global store is needed. Calendar state can stay local to `DailyClient`.
+不需要新增全局 store。日历月份和选中日期状态放在 `DailyClient` 局部状态中即可。
 
-## Error Handling
+## 错误处理
 
-- Missing `NOTION_DAILY_DATABASE_ID`: show an empty Daily page state, not a runtime crash.
-- Notion query failure: catch at the route boundary and show an empty state.
-- Entry body block fetch failure: show title/date/tags and a short body unavailable state.
-- Empty Daily database: show an empty state.
+- 缺少 `NOTION_DAILY_DATABASE_ID`：展示 Daily 空状态，不抛运行时错误。
+- Notion 查询失败：在页面层 catch，展示空状态。
+- 详情正文 blocks 读取失败：仍展示标题、日期和标签，正文区域展示不可用状态。
+- Daily 数据库为空：展示空状态。
 
-## Acceptance Criteria
+## 验收标准
 
-- `/daily` renders without affecting `/blog`.
-- Navigation includes `Daily`.
-- A public Notion Daily entry appears on its date in the calendar.
-- The page defaults to the most recent public entry.
-- Clicking a marked date updates the detail panel.
-- Entries with `公开=false` do not appear.
-- Entry body is rendered from Notion page body content.
-- Missing or failing Notion Daily configuration does not crash the page.
-- `npm run build` passes.
+- `/daily` 能正常渲染，且不影响 `/blog`。
+- 公开导航出现 `Daily`。
+- 公开 Notion Daily 记录会在对应日期上显示标记。
+- 页面默认选中最近一条公开记录。
+- 点击有记录的日期后，详情面板切换到对应内容。
+- `公开=false` 的 Notion 页面不会出现在日历中。
+- 详情正文来自 Notion 页面正文内容。
+- Daily Notion 配置缺失或拉取失败时，页面不会崩溃。
+- `npm run build` 通过。
 
-## Open Implementation Notes
+## 实现注意事项
 
-- Prefer Chinese Notion property names from this spec, with optional English fallbacks only if needed during implementation.
-- Use date strings as local calendar days; avoid timezone conversions that can shift the selected date.
-- Keep the first implementation scoped to a single month view and one entry per day.
+- 优先按本 spec 的中文字段名读取 Notion 属性，只有实现时确实需要再加英文 fallback。
+- 日期按本地日期字符串处理，避免时区转换导致日期前后偏移。
+- 第一版只做单月日历视图和每天最多一条记录。
