@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
-import Link from 'next/link'
 import { getPublishedPosts } from '@/lib/notion'
+import { BlogClient } from './BlogClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -25,34 +25,8 @@ export default async function BlogPage() {
           暂时没有可展示的博客文章。
         </div>
       ) : (
-        <div className="space-y-6">
-          {posts.map((post) => (
-            <Link
-              key={post.id}
-              href={`/blog/${encodeURIComponent(post.id)}`}
-              className="block border border-white/15 bg-white/5 rounded-lg p-6 hover:shadow-lg hover:shadow-purple-500/20 transition-shadow cursor-pointer"
-            >
-              <article>
-                <h2 className="text-xl font-semibold mb-2 text-white hover:text-purple-200 transition-colors">
-                  {post.title}
-                </h2>
-                <div className="flex gap-2 mb-2 flex-wrap">
-                  {post.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-2 py-1 bg-purple-200/20 text-purple-100 text-sm rounded"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-                <p className="text-gray-300 text-sm">{post.publishedDate || '未设置发布日期'}</p>
-              </article>
-            </Link>
-          ))}
-        </div>
+        <BlogClient posts={posts} />
       )}
     </div>
   )
 }
-

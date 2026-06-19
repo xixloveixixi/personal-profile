@@ -12,6 +12,10 @@ interface BlogPostPageProps {
   }
 }
 
+function getPostCategory(category?: string) {
+  return category?.trim() || '未分类'
+}
+
 export async function generateStaticParams() {
   if (!process.env.NOTION_TOKEN || !process.env.NOTION_DATABASE_ID) return []
   const posts = await getPublishedPosts()
@@ -31,17 +35,22 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   return (
     <article className="max-w-3xl mx-auto py-12 px-4 relative z-10">
       <h1 className="text-3xl font-bold mb-4 text-white">{post.title}</h1>
-      <div className="flex gap-2 mb-6 flex-wrap">
+      <div className="mb-6 flex flex-wrap items-center gap-2">
+        <span className="rounded-full border border-purple-200/30 bg-purple-200/15 px-2.5 py-1 text-sm text-purple-50">
+          {getPostCategory(post.category)}
+        </span>
+        <span className="text-sm text-gray-400">{post.publishedDate || '未设置发布日期'}</span>
+      </div>
+      <div className="flex gap-2 mb-8 flex-wrap">
         {post.tags.map((tag) => (
           <span
             key={tag}
-            className="px-2 py-1 bg-purple-200/20 text-purple-100 text-sm rounded"
+            className="rounded bg-cyan-200/10 px-2 py-1 text-sm text-cyan-50"
           >
             {tag}
           </span>
         ))}
       </div>
-      <div className="text-gray-300 text-sm mb-8">{post.publishedDate || '未设置发布日期'}</div>
       <div className="max-w-none">
         <NotionBlockRenderer blocks={blocks} />
       </div>

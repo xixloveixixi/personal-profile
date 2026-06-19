@@ -6,6 +6,7 @@ export interface NotionPost {
   id: string
   title: string
   status?: string
+  category?: string
   tags: string[]
   publishedDate?: string
 }
@@ -101,6 +102,13 @@ function readTags(page: any): string[] {
   return []
 }
 
+function readCategory(page: any) {
+  const prop = getProperty(page, ['选择', '分类', 'Category', 'category'])
+  if (!prop) return undefined
+  if (prop.type === 'select') return prop.select?.name || undefined
+  return undefined
+}
+
 function readPublishedDate(page: any) {
   const prop = getProperty(page, ['发布日期', '发布时间', 'Published', 'publishedDate'])
   if (!prop) return undefined
@@ -113,6 +121,7 @@ function mapPageToPost(page: any): NotionPost {
     id: page.id,
     title: readTitle(page),
     status: readStatus(page),
+    category: readCategory(page),
     tags: readTags(page),
     publishedDate: readPublishedDate(page),
   }
@@ -235,4 +244,3 @@ export async function getPostById(pageId: string): Promise<NotionPost | null> {
 export async function getPostBlocks(pageId: string): Promise<NotionBlockNode[]> {
   return getPostBlocksCached(pageId)
 }
-

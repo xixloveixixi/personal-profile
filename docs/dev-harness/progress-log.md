@@ -916,6 +916,43 @@
 - [x] `progress-log.md` 已更新
 - [x] 本闭环无新增踩坑需写入 `pitfalls.md`
 
+## 2026-06-19
+
+### 今日目标
+- 为 Notion 博客增加分类 + 标签筛选能力。
+
+### 今日完成
+- 新增并确认设计文档 `docs/superpowers/specs/2026-06-19-blog-category-tags-design.md`，明确不迁移 Notion、不新增博客后端表。
+- `lib/notion.ts` 增加 `category` 字段读取，优先读取 Notion Select 字段 `选择`，兼容 `分类 / Category / category`。
+- `/blog` 列表页改为 Server Component 拉取 Notion posts 后交给 `BlogClient` 做客户端筛选。
+- `app/blog/BlogClient.tsx` 实现搜索 + 分类 + tag 组合筛选，分类固定为 `技术实践 / AI/Agent / 项目复盘 / 学习笔记`，tag 从当前文章集合动态聚合。
+- `/blog/[slug]` 详情页展示分类 badge、发布日期和标签。
+
+### 当前阻塞
+- 无。
+
+### 关键决策
+- 博客仍以 Notion 为唯一数据源；分类使用 Notion `选择` Select 字段，标签继续使用 Notion `标签` multi-select 字段。
+- 第一版筛选状态只放在 client state，不写入 URL query，也不新增 `/blog/category/[category]` 路由。
+
+### 验收结果
+- `npm run build` 通过。
+- 首次沙箱内 build 在收集 `/portfolio/[slug]` 页面数据时因网络权限失败；按权限提权后同一命令通过。
+
+### Gate E 状态
+- [x] Notion `选择` Select 字段已映射为前端文章分类。
+- [x] `/blog` 支持按分类筛选文章。
+- [x] `/blog` 支持在当前分类下按标签细筛文章。
+- [x] 搜索、分类、标签组合筛选逻辑已接入。
+- [x] 文章卡片展示分类 badge、发布日期和标签。
+- [x] 文章详情页展示分类 badge、发布日期和标签。
+- [x] 未设置分类的文章显示为 `未分类`。
+- [x] `npm run build` 通过。
+
+### Gate F 状态
+- [x] `progress-log.md` 已更新。
+- [x] 本闭环无新增踩坑需写入 `pitfalls.md`。
+
 ## 2026-06-18
 
 ### 今日目标
