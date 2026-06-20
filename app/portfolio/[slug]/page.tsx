@@ -9,7 +9,7 @@ export { generateMetadata }
 export const dynamic = 'force-dynamic'
 
 export async function generateStaticParams() {
-  const projects = await getPublicProjects()
+  const projects = await getPublicProjects().catch(() => [])
   return projects.map((project) => ({
     slug: project.slug,
   }))

@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { getPostBlocks, getPostById, getPublishedPosts } from '@/lib/notion'
+import { getPostBlocks, getPostById } from '@/lib/notion'
 import { NotionBlockRenderer } from '@/components/blog/NotionBlockRenderer'
 import { generateMetadata } from './metadata'
 
@@ -14,12 +14,6 @@ interface BlogPostPageProps {
 
 function getPostCategory(category?: string) {
   return category?.trim() || '未分类'
-}
-
-export async function generateStaticParams() {
-  if (!process.env.NOTION_TOKEN || !process.env.NOTION_DATABASE_ID) return []
-  const posts = await getPublishedPosts()
-  return posts.map((post) => ({ slug: post.id }))
 }
 
 export default async function BlogPostPage({ params }: BlogPostPageProps) {

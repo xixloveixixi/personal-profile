@@ -15,8 +15,8 @@ export const metadata: Metadata = {
 
 export default async function AboutPage() {
   const [timelineEntries, projects, profile, skills] = await Promise.all([
-    getPublicTimeline(),
-    getPublicProjects(),
+    getPublicTimeline().catch(() => []),
+    getPublicProjects().catch(() => []),
     getPublicProfile().catch(() => null),
     getPublicSkills().catch(() => []),
   ])

@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 }
 
 export default async function PortfolioPage() {
-  const projects = await getPublicProjects()
+  const projects = await getPublicProjects().catch(() => [])
 
   return (
     <div className="min-h-full px-4 py-12 md:py-16 relative">
