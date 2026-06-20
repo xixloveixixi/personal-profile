@@ -5,7 +5,8 @@
  *
  * 校验项：
  *   1. progress-log.md 最后一条日志的日期不晚于今天
- *   2. stage-plan.md 当前阶段 Gate E 全部 ✅ 才允许提示进入下一阶段
+ *   2. state.json 与 stage-plan.md 当前阶段游标一致
+ *   3. stage-plan.md 当前阶段 Gate A-F 状态可读
  *   3. 旧技术栈关键词（Spring Boot / Maven / Mybatis）不应残留在执行文档
  *   4. api-contract.md 与 schema.md 存在且非空
  *   5. AGENTS.md 中"未填禁止写业务 handler"约束仍存在
@@ -29,6 +30,59 @@ function read(file) {
   return fs.readFileSync(p, "utf8");
 }
 
+function readJson(file) {
+  const content = read(file);
+  if (!content) return null;
+  try {
+    return JSON.parse(content);
+  } catch (e) {
+    err(`${file} 不是合法 JSON：${e.message}`);
+    return null;
+  }
+}
+
+function getCurrentStage() {
+  const content = read("stage-plan.md");
+  if (!content) {
+    err("stage-plan.md 不存在");
+    return null;
+  }
+
+  const headings = [...content.matchAll(/^##\s*当前阶段：([^\n]+)$/gm)];
+  if (headings.length === 0) {
+    warn("未在 stage-plan.md 找到 '当前阶段' 标题");
+    return null;
+  }
+  if (headings.length > 1) {
+    err(`stage-plan.md 存在 ${headings.length} 个 '当前阶段' 标题，只能保留一个`);
+  }
+
+  const heading = headings[0];
+  const start = heading.index + heading[0].length;
+  const nextHeading = content.slice(start).match(/\n##\s/);
+  const end = nextHeading ? start + nextHeading.index : content.length;
+
+  return {
+    name: heading[1].trim(),
+    body: content.slice(start, end),
+  };
+}
+
+function checkboxStats(text) {
+  const items = [...text.matchAll(/^-\s*\[( |x|X)\]/gm)];
+  return {
+    checked: items.filter((i) => i[1].toLowerCase() === "x").length,
+    total: items.length,
+  };
+}
+
+function gateStats(stageBody, gate) {
+  const re = new RegExp(`####\\s*${gate}[^\\n]*\\n([\\s\\S]*?)(?=\\n####|\\n##|$)`);
+  const match = stageBody.match(re);
+  if (!match) return null;
+  return checkboxStats(match[1]);
+}
+
 // 1. progress-log 日期校验
 function checkProgressLogDate() {
   const content = read("progress-log.md");
@@ -41,23 +95,44 @@ function checkProgressLogDate() {
   ok(`progress-log.md 最新日期 ${last}（OK）`);
 }
 
-// 2. 当前阶段 Gate E 状态
-function checkCurrentStageGateE() {
-  const content = read("stage-plan.md");
-  if (!content) return err("stage-plan.md 不存在");
-  const m = content.match(/##\s*当前阶段：([^\n]+)\n([\s\S]*?)(?=\n##\s|$)/);
-  if (!m) return warn("未在 stage-plan.md 找到 '当前阶段' 标题");
-  const stageName = m[1].trim();
-  const body = m[2];
-  const gateE = body.match(/####\s*Gate E[^\n]*\n([\s\S]*?)(?=\n####|\n##|$)/);
-  if (!gateE) return warn(`阶段 [${stageName}] 未定义 Gate E`);
-  const items = [...gateE[1].matchAll(/^-\s*\[( |x|X)\]/gm)];
-  const total = items.length;
-  const checked = items.filter((i) => i[1].toLowerCase() === "x").length;
-  if (total === 0) return warn(`阶段 [${stageName}] Gate E 无勾选项`);
-  if (checked === total)
-    ok(`阶段 [${stageName}] Gate E 已全部通过 (${checked}/${total})，可进入下一阶段`);
-  else warn(`阶段 [${stageName}] Gate E 进度 ${checked}/${total}，尚未全部通过`);
+// 2. 结构化状态与阶段游标
+function checkStateFile(currentStage) {
+  const state = readJson("state.json");
+  if (!state) return warn("state.json 不存在或不可读，将只使用 stage-plan.md");
+  if (!state.currentStage) return err("state.json 缺少 currentStage");
+  if (currentStage && state.currentStage !== currentStage.name) {
+    err(`state.json currentStage 与 stage-plan.md 不一致：state=${state.currentStage} / stage-plan=${currentStage.name}`);
+  } else if (currentStage) {
+    ok(`state.json 当前阶段与 stage-plan.md 一致：${state.currentStage}`);
+  }
+  if (state.harnessMode !== "lightweight") {
+    warn(`state.json harnessMode=${state.harnessMode || "(空)"}，当前建议保持 lightweight`);
+  }
+}
+
+// 3. 当前阶段 Gate 状态
+function checkCurrentStageGates(currentStage) {
+  if (!currentStage) return;
+  const gates = ["Gate A", "Gate B", "Gate C", "Gate D", "Gate E", "Gate F"];
+  const summaries = [];
+
+  for (const gate of gates) {
+    const stats = gateStats(currentStage.body, gate);
+    if (!stats) {
+      warn(`阶段 [${currentStage.name}] 未定义 ${gate}`);
+      continue;
+    }
+    if (stats.total === 0) {
+      warn(`阶段 [${currentStage.name}] ${gate} 无勾选项`);
+      continue;
+    }
+    summaries.push(`${gate.replace("Gate ", "")}:${stats.checked}/${stats.total}`);
+    if (stats.checked < stats.total) {
+      warn(`阶段 [${currentStage.name}] ${gate} 进度 ${stats.checked}/${stats.total}`);
+    }
+  }
+
+  if (summaries.length) ok(`阶段 [${currentStage.name}] Gate 状态：${summaries.join(" ")}`);
 }
 
 // 3. 旧技术栈关键词残留
@@ -92,7 +167,30 @@ function checkContractFiles() {
   }
 }
 
-// 5. AGENTS.md 禁止条款
+// 5. 契约文档轻量漂移检查
+function checkContractDrift(currentStage) {
+  const api = read("api-contract.md");
+  if (api && currentStage) {
+    const m = api.match(/^>\s*当前阶段：(.+)$/m);
+    if (m) {
+      const marker = m[1].trim();
+      const currentNumber = currentStage.name.match(/阶段\s*(\d+)/)?.[1];
+      if (currentNumber && !marker.includes(`Stage ${currentNumber}`) && !marker.includes(`阶段 ${currentNumber}`)) {
+        warn(`api-contract.md 顶部当前阶段标记可能过期：${marker}；stage-plan 当前为 ${currentStage.name}`);
+      }
+    }
+  }
+
+  const schema = read("schema.md");
+  if (!schema) return;
+  const mixed = [...schema.matchAll(/^##\s*待冻结表[^\n]*\n\s*\n>\s*状态：✅\s*已冻结[^\n]*/gm)];
+  for (const match of mixed) {
+    const line = schema.slice(0, match.index).split("\n").length;
+    warn(`schema.md:${line} 标题写“待冻结表”但状态为“已冻结”，建议改成“已冻结表”或“候选表”`);
+  }
+}
+
+// 6. AGENTS.md 禁止条款
 function checkAgentsRule() {
   const p = path.join(ROOT, "AGENTS.md");
   if (!fs.existsSync(p)) return err("AGENTS.md 不存在");
@@ -103,10 +201,13 @@ function checkAgentsRule() {
 }
 
 function main() {
+  const currentStage = getCurrentStage();
   checkProgressLogDate();
-  checkCurrentStageGateE();
+  checkStateFile(currentStage);
+  checkCurrentStageGates(currentStage);
   checkLegacyKeywords();
   checkContractFiles();
+  checkContractDrift(currentStage);
   checkAgentsRule();
 
   console.log("\n=== Harness Check Report ===\n");

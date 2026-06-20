@@ -169,7 +169,7 @@
   - `achievements` 和 `technologies` 用 JSON 字段存储，不拆子表，保持与现有静态文件结构对齐。
   - `entry_type` 当前约束为 `education` / `work`；项目经历归入 `work`，避免额外枚举扩散。
 
-## 待冻结表（Stage 3 / FB-3）
+## 已冻结表（Stage 3 / FB-3）
 
 > 状态：✅ 已冻结于 2026-06-02。
 
@@ -204,7 +204,7 @@
   - `owner_id` 字段在其他表（public_profile 等）与 `sys_user.id` 形成应用层 FK。
   - Stage 3 admin 接口从"仅校验有效 Token"升级为"校验 Token 中 role=owner"。
 
-## 待冻结表（Stage 6 / FB-4）
+## 已冻结表（Stage 6 / FB-4）
 
 > 状态：✅ 已冻结于 2026-06-02。
 
@@ -250,7 +250,7 @@
   - `technologies` 和 `gallery` 用 JSON 字段存储，不拆子表（SDD 10.8 `portfolio_project_tech` 简化），降低 JOIN 复杂度，数据量小无性能问题。
   - 与前端 `PortfolioProject` 接口完全对齐：`slug / title / shortDescription / longDescription / problem / solution / challenges / results / technologies / githubUrl / demoUrl / featuredImage / gallery / publishedAt / featured / order`。
 
-## 待冻结表（Stage 7 / FB-5）
+## 已冻结表（Stage 7 / FB-5）
 
 > 状态：✅ 已冻结于 2026-06-03。
 
@@ -330,7 +330,7 @@
 - **关联接口**：`GET /api/health`（写入）、`GET /api/admin/health-stats`（读取统计）。
 - **备注**：不做软删除，日志表轻量化；未来可加定时清理。
 
-## 待冻结表（Stage 8 / FB-6）
+## 已冻结表（Stage 8 / FB-6）
 
 > 状态：✅ 已冻结于 2026-06-04。
 > AI 调用方式：后端 Go 调用 DeepSeek API（OpenAI 兼容），API Key 通过 `DEEPSEEK_API_KEY` 环境变量配置。
@@ -424,7 +424,7 @@
 - **关联接口**：`POST /api/private/learning/tasks/:taskId/progress`、`GET /api/private/learning/tasks/:taskId/progress`。
 - **备注**：不做软删除（日志表轻量化）；每次 POST 累加 `learning_task.actual_minutes`。
 
-## 待冻结表（Stage 9 / FB-7：Learning Coach Agent）
+## 已冻结表（Stage 9 / FB-7：Learning Coach Agent）
 
 > 状态：✅ 已冻结于 2026-06-07。
 > 设计文档：`docs/superpowers/specs/2026-06-07-learning-coach-agent-design.md`。

@@ -665,3 +665,65 @@ about 时间线已经完成数据库化，但首轮清理时只看到了 `timeli
 - 新增路由后，先看启动日志里是否出现对应路径，再做 curl 验收。
 - 如果代码里明明注册了路由但接口仍返回 404，优先怀疑“旧进程未重启”，不要先怀疑实现本身。
 - 把“查看启动日志中的路由清单”纳入后端 Gate E 验收习惯动作。
+
+## brainstorming 临时视觉草图目录未忽略导致 git 状态污染
+
+### 场景
+
+使用 brainstorming visual companion 做 Daily 日历布局草图时，服务会在项目根目录创建 `.superpowers/brainstorm/...` 临时目录。项目原本没有忽略 `.superpowers/`，导致多个草图目录出现在 `git status` 的未跟踪文件中。
+
+### 原因
+
+visual companion 为了持久化草图，会把 HTML 片段和状态文件写进项目目录。该目录属于协作过程产物，不是产品代码或设计文档；如果未加入 `.gitignore`，容易在后续 `git add` 时被误提交。
+
+### 解决方案
+
+在 `.gitignore` 中加入：
+
+```gitignore
+.superpowers/
+```
+
+### 下次如何避免
+
+首次使用 visual companion 后立即检查 `git status`。如果出现 `.superpowers/brainstorm/...`，先确认 `.gitignore` 已忽略 `.superpowers/`，只提交最终 spec 或代码产物。
+
+## Harness 闸门检查过严会变成流程负担
+
+### 场景
+
+优化 `harness:check` 时，最初把 Gate A-F 都纳入检查，但脚本解析 bug 导致当前阶段正文被读成空，产生 6 条“未定义 Gate”的误报。即使解析正确，如果把所有未完成 Gate 都做成硬错误，也会让日常小闭环很难推进。
+
+### 原因
+
+Harness 的目标是防止方向漂移和返工，不是把每个提醒都变成阻断。当前项目的 Gate E/F 经常会在阶段中间处于未完成状态，如果脚本把这些状态当成失败，会制造额外心理负担。
+
+### 解决方案
+
+- 明显漂移做硬错误：多个当前阶段、`state.json` 与 `stage-plan.md` 不一致、关键约束缺失。
+- 正常未完成做 warning：Gate E/F 未全勾、浏览器验收待补、progress-log 待归档。
+- `harness:check` 输出要收敛到真实行动项，避免噪音掩盖真正问题。
+
+### 下次如何避免
+
+新增 Harness 检查项时先跑一次实际项目状态，确认 warning 数量可控。默认把新增规则做成 warning，只有确认会导致写错方向或破坏契约时，再升级为 error。
+
+## package-lock.json 残留冲突标记会被 build 掩盖
+
+### 场景
+
+收工审计时，`npm run build` 最终可以完成，但 Next.js 在构建开头输出 `SyntaxError: Expected double-quoted property name in JSON`。进一步检查发现 `package-lock.json` 中残留了 `<<<<<<< Updated upstream` / `=======` / `>>>>>>> Stashed changes` 冲突标记。
+
+### 原因
+
+Next.js 的 lockfile 修补逻辑读取 `package-lock.json` 失败后没有直接终止整个构建，导致“页面构建成功”容易掩盖“锁文件不是合法 JSON”的仓库完整性问题。锁文件里还残留了 `zustand` 同时存在于 `dependencies` 与 `devDependencies` 的历史冲突语义。
+
+### 解决方案
+
+- 用 `rg -n "^<<<<<<<|^=======|^>>>>>>>" package-lock.json package.json` 检查冲突标记。
+- 用 `node -e "JSON.parse(require('fs').readFileSync('package-lock.json','utf8'))"` 检查锁文件合法性。
+- 修正 `package.json` 的真实依赖归属后，执行 `npm install --package-lock-only --ignore-scripts` 重新生成 lockfile。
+
+### 下次如何避免
+
+收工前不要只看 `npm run build` 的最终 exit code，也要扫描构建日志中的早期异常。凡是 lockfile / package manifest 出现 JSON parse 错误，都按交付阻断处理，即使构建最终成功。

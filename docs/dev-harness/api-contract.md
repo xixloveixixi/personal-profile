@@ -1,7 +1,7 @@
 # API 契约文档
 
 > 业务后端开发前必须先在此文件中冻结接口契约。
-> 当前阶段：Stage 3 / FB-3 sys_user 与权限 — 已冻结（2026-06-02）。
+> 当前阶段：Stage 11 / FB-8 Learning Coach 体验增强 — 不新增业务契约（沿用 Stage 9-10 Agent 对话契约）。
 > 权威源：`tech_design/ai-learning-platform/SDD-AI学习规划与成长记录平台.md` 第 9 章。
 > 本文件是"将进入实现"的子集，必须先于 handler 代码存在。
 

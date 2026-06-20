@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "harnessMode": "lightweight",
+  "currentStage": "阶段 11 Learning Coach 体验增强（FB-8）",
+  "currentFsmState": "done",
+  "stagePlanPath": "docs/dev-harness/stage-plan.md",
+  "apiContractPath": "docs/dev-harness/api-contract.md",
+  "schemaPath": "docs/dev-harness/schema.md",
+  "progressLogPath": "docs/dev-harness/progress-log.md",
+  "pitfallsPath": "docs/dev-harness/pitfalls.md",
+  "lastHarnessCheck": "2026-06-20",
+  "notes": [
+    "This file is the machine-readable Harness state. Markdown files remain the human-readable plan, contract, log, and pitfalls.",
+    "Gate C remains user-owned. Do not auto-check learning items from this file or from scripts."
+  ]
+}

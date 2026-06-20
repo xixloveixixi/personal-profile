@@ -1059,3 +1059,131 @@
 ### Gate F 状态
 - [x] `progress-log.md` 已更新
 - [x] 本闭环无新增踩坑需写入 `pitfalls.md`
+
+## 2026-06-19（Daily Notion 日历）
+
+### 今日目标
+- 新增一个基于独立 Notion 数据库的公开 Daily / 碎碎念日历页。
+
+### 今日完成
+- 使用 brainstorming 流程确认设计：独立 Notion Daily 数据库、公开 `/daily`、导航 `Daily`、日历 + 当日详情、每天最多一条、正文写在 Notion 页面 body、第一版不做图片/评论/筛选。
+- 新增中文设计文档 `docs/superpowers/specs/2026-06-19-daily-notion-calendar-design.md`，并按用户要求将 spec 改为中文。
+- `lib/notion.ts` 新增 Daily 读取能力：`NOTION_DAILY_DATABASE_ID`、`NotionDailyEntry`、`getPublishedDailyEntries()`、`getDailyEntryBlocks()`；博客 Notion 逻辑保持使用 `NOTION_DATABASE_ID`。
+- 新增 `/daily` 页面：Server Component 拉取公开 Daily 列表并预取正文 blocks，Client Component 管理月份切换、日期选择、日历格子和详情状态。
+- 公开导航新增 `Daily` 入口。
+- `.gitignore` 新增 `.superpowers/`，避免 brainstorming 临时视觉草图目录进入 git 状态。
+
+### 当前阻塞
+- 无。2026-06-20 已补配 `NOTION_DAILY_DATABASE_ID` 并完成真实 Notion 数据验收。
+
+### 关键决策
+- Daily 使用 Notion 作为唯一写作后台，不新增 Go / MySQL / admin CRUD。
+- Daily 正文读取 Notion 页面正文 blocks，而不是 rich text 属性。
+- `公开` checkbox 缺失时按默认公开处理，但最终公开页只展示有有效 `日期` 的记录。
+
+### 验收结果
+- `npm run build` 首次在沙箱网络权限下因 `/portfolio/[slug]` 收集页面数据失败；按权限提权后同一命令通过。
+- `npm run harness:check` 通过，只有阶段 11 原有 Gate E 2/5 的 warning。
+- 浏览器打开 `http://localhost:3004/daily` 返回 200。
+- 浏览器 DOM 验收确认：导航包含 `Daily`，页面显示标题「碎碎念」和空状态「暂时没有碎碎念」，控制台无 error/warn。
+- 2026-06-20 真实 Notion 数据验收：`http://localhost:3003/daily` 显示 2026 年 6 月日历，6 月 20 日有记录标记；详情展示标题「杂记」、标签「开心」「轻松」和正文「第一天」，用户确认符合预期。
+
+### Gate E 状态
+- [x] `/daily` 路由已新增，未影响 `/blog` 构建。
+- [x] 公开导航已出现 `Daily`。
+- [x] Daily Notion 配置缺失时页面不崩溃，展示空状态。
+- [x] `npm run build` 通过。
+- [x] 公开 Notion Daily 记录在对应日期显示标记。
+- [x] 页面默认选中最近一条公开记录。
+- [x] 点击有记录日期可展示对应详情。
+- [ ] `公开=false` 不展示（待新增隐藏样本后验收）。
+- [x] 详情正文来自 Notion 页面正文。
+
+### Gate F 状态
+- [x] `progress-log.md` 已更新。
+- [x] `.superpowers/` 临时草图目录忽略规则已写入 `pitfalls.md`。
+
+## 2026-06-20（Harness 轻量优化）
+
+### 今日目标
+- 优化研发 Harness，保留必要闸门，降低流程负担。
+
+### 今日完成
+- 新增 `docs/dev-harness/state.json`，作为机器可读的轻量 Harness 状态源，记录当前阶段、模式和关键文档路径。
+- 在 `stage-plan.md` 顶部补充“轻量 Harness 架构”说明，明确 `stage-plan.md` / `state.json` / 契约文档 / 日志 / 踩坑库 / `harness:check` 的职责边界。
+- 增强 `scripts/harness-check.js`：
+  - 检查 `stage-plan.md` 只能有一个 `## 当前阶段：`。
+  - 检查 `state.json.currentStage` 与 `stage-plan.md` 当前阶段一致。
+  - 汇总当前阶段 Gate A-F 勾选进度。
+  - 将未完成 Gate 输出为 warning，避免日常小闭环被过度阻断。
+  - 增加契约轻量漂移检查：API 顶部阶段标记、schema “待冻结但已冻结”混合语义。
+- 修正 `api-contract.md` 顶部当前阶段说明，标注 Stage 11 不新增业务契约。
+- 修正 `schema.md` 中已冻结阶段仍标成“待冻结表”的标题。
+
+### 当前阻塞
+- 无。
+
+### 关键决策
+- 当前 Harness 保持 lightweight，不引入 Self-Harness 自动改规则，也不启用 6-Agent 自动流水线。
+- `harness:check` 的硬错误只用于明显漂移；Gate 未完成默认 warning，避免闸门变成流程负担。
+
+### 验收结果
+- `npm run harness:check` 通过。
+- 当前仅保留 2 个真实 warning：Stage 11 Gate E 2/5、Gate F 1/3，符合当前阶段尚未完整浏览器验收和归档的事实。
+
+### Gate E 状态
+- [x] `state.json` 已新增，并与 `stage-plan.md` 当前阶段一致。
+- [x] `harness:check` 可识别当前阶段 Gate A-F 进度。
+- [x] Harness 检查不会因未完成 Gate 直接失败，保持轻量提醒。
+- [x] 文档漂移项已收敛：API 顶部阶段标记与 schema 冻结标题已修正。
+
+### Gate F 状态
+- [x] `progress-log.md` 已更新。
+- [x] `pitfalls.md` 已补充轻量闸门策略。
+
+## 2026-06-20（Stage 11 交付收口）
+
+### 今日目标
+- 修复收工前阻断项，完成 Stage 11 Learning Coach 体验增强验收。
+
+### 今日完成
+- 按用户最新要求调整 Stage 11 范围：不展示 Tool 调用状态，只保持前端兼容消费 `tool_call` / `tool_result` SSE 事件，避免打断现有流式回复。
+- 修复 `package-lock.json` 中残留的 Git 冲突标记，`package-lock.json` 已可被标准 `JSON.parse` 正常解析。
+- 清理 `zustand` 重复依赖声明：保留在 `dependencies`，从 `devDependencies` 移除，并重新生成 lockfile。
+- 真实本机联调 Learning Coach：
+  - `POST /api/auth/login` 成功获取 owner token。
+  - `POST http://127.0.0.1:8000/api/chat` 返回 SSE，包含 `token` 流、2 个 Tool 事件和 `done` 事件。
+  - 本次临时会话 `conversationId=13`，返回 `tokenChunks=16`、`toolEvents=2`。
+  - `GET /api/chat/history/13?limit=2` 返回 2 条消息，无重复 id。
+  - 验收后通过 Go 后端删除临时会话，避免污染历史列表。
+- 交付检查通过：
+  - `npm run type-check`
+  - `go test ./...`
+  - `PYTHONPYCACHEPREFIX=/private/tmp/personal-profile-pycache python3 -m py_compile ...`
+  - `python3 -c "import app.main; print('agent-service import ok')"`
+  - `npm run build`（提权访问本机/网络 API 后通过）
+  - `npm run harness:check`
+
+### 当前阻塞
+- 无。Stage 11 Gate E/F 已全部完成。
+
+### 关键决策
+- Tool 调用状态不进入 UI，本阶段只保证 SSE 兼容消费和回复稳定，避免扩大前端交互范围。
+- 锁文件冲突标记属于交付阻断项，即使 `next build` 能继续完成，也必须修复到 JSON 可解析。
+
+### 验收结果
+- SSE 对话真实返回 `done=true`，且历史分页返回 2 条、无重复 id。
+- `package-lock.json` 无冲突标记，`JSON.parse` 通过。
+- `npm run harness:check` 通过，当前阶段 Gate A-F 全部完成。
+
+### Gate E 状态
+- [x] Tool 调用事件可被前端兼容消费，且不会打断现有流式回复。
+- [x] 会话切换 / 删除 / 续聊行为稳定，无重复消息或错乱状态。
+- [x] 历史加载更早消息时无重复请求、无重复渲染。
+- [x] `npm run build` 通过。
+- [x] agent-service 导入 / 启动验证通过。
+
+### Gate F 状态
+- [x] `progress-log.md` 已更新。
+- [x] `pitfalls.md` 已补充 package-lock 冲突标记踩坑。
+- [x] 下一阶段范围已明确。

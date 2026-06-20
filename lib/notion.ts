@@ -11,6 +11,14 @@ export interface NotionPost {
   publishedDate?: string
 }
 
+export interface NotionDailyEntry {
+  id: string
+  title: string
+  date?: string
+  tags: string[]
+  isPublic: boolean
+}
+
 export interface NotionBlockNode {
   id: string
   type: string
@@ -21,21 +29,29 @@ export interface NotionBlockNode {
 
 const notionToken = process.env.NOTION_TOKEN
 const databaseId = process.env.NOTION_DATABASE_ID
+const dailyDatabaseId = process.env.NOTION_DAILY_DATABASE_ID
 
-function ensureNotionEnv() {
-  if (!notionToken || !databaseId) {
-    throw new Error('Missing NOTION_TOKEN or NOTION_DATABASE_ID in environment variables.')
+function ensureNotionToken() {
+  if (!notionToken) {
+    throw new Error('Missing NOTION_TOKEN in environment variables.')
   }
 }
 
+function ensureDatabaseId(id: string | undefined, envName: string) {
+  if (!id) {
+    throw new Error(`Missing ${envName} in environment variables.`)
+  }
+  return id
+}
+
 function getNotionClient() {
-  ensureNotionEnv()
+  ensureNotionToken()
   return new Client({
     auth: notionToken,
   })
 }
 
-async function queryAllPages(notion: Client) {
+async function queryAllPages(notion: Client, targetDatabaseId: string) {
   const notionAny = notion as any
   const allResults: any[] = []
   let hasMore = true
@@ -44,7 +60,7 @@ async function queryAllPages(notion: Client) {
   while (hasMore) {
     if (notionAny.databases?.query) {
       const response = await notionAny.databases.query({
-        database_id: databaseId!,
+        database_id: targetDatabaseId,
         start_cursor: startCursor,
         page_size: 100,
       })
@@ -56,7 +72,7 @@ async function queryAllPages(notion: Client) {
 
     if (notionAny.dataSources?.query) {
       const response = await notionAny.dataSources.query({
-        data_source_id: databaseId!,
+        data_source_id: targetDatabaseId,
         start_cursor: startCursor,
         page_size: 100,
       })
@@ -66,7 +82,9 @@ async function queryAllPages(notion: Client) {
       continue
     }
 
-    throw new Error('Current @notionhq/client version does not expose query API.')
+    throw new Error(
+      'Current @notionhq/client version does not expose query API.'
+    )
   }
 
   return allResults
@@ -83,7 +101,8 @@ function readTitle(page: any) {
   const prop = getProperty(page, ['文章', '标题', 'Name', 'name', 'Title'])
   if (!prop) return '无标题'
   if (prop.type === 'title') return prop.title?.[0]?.plain_text || '无标题'
-  if (prop.type === 'rich_text') return prop.rich_text?.[0]?.plain_text || '无标题'
+  if (prop.type === 'rich_text')
+    return prop.rich_text?.[0]?.plain_text || '无标题'
   return '无标题'
 }
 
@@ -98,7 +117,8 @@ function readStatus(page: any) {
 function readTags(page: any): string[] {
   const prop = getProperty(page, ['标签', 'Tags', 'tags'])
   if (!prop) return []
-  if (prop.type === 'multi_select') return prop.multi_select?.map((t: any) => t.name) || []
+  if (prop.type === 'multi_select')
+    return prop.multi_select?.map((t: any) => t.name) || []
   return []
 }
 
@@ -110,10 +130,56 @@ function readCategory(page: any) {
 }
 
 function readPublishedDate(page: any) {
-  const prop = getProperty(page, ['发布日期', '发布时间', 'Published', 'publishedDate'])
+  const prop = getProperty(page, [
+    '发布日期',
+    '发布时间',
+    'Published',
+    'publishedDate',
+  ])
   if (!prop) return undefined
   if (prop.type === 'date') return prop.date?.start
   return undefined
+}
+
+function normalizeDateKey(value?: string) {
+  if (!value) return undefined
+  return value.slice(0, 10)
+}
+
+function readDailyTitle(page: any) {
+  const prop = getProperty(page, ['标题', 'Title', 'Name', 'name'])
+  if (!prop) return '无标题'
+  if (prop.type === 'title') return prop.title?.[0]?.plain_text || '无标题'
+  if (prop.type === 'rich_text')
+    return prop.rich_text?.[0]?.plain_text || '无标题'
+  return '无标题'
+}
+
+function readDailyDate(page: any) {
+  const prop = getProperty(page, ['日期', 'Date', 'date'])
+  if (!prop) return undefined
+  if (prop.type === 'date') return normalizeDateKey(prop.date?.start)
+  return undefined
+}
+
+function readDailyTags(page: any): string[] {
+  const prop = getProperty(page, ['标签', 'Tags', 'tags'])
+  if (!prop) return []
+  if (prop.type === 'multi_select')
+    return prop.multi_select?.map((t: any) => t.name) || []
+  return []
+}
+
+function readDailyIsPublic(page: any) {
+  const prop = getProperty(page, ['公开', '是否公开', 'Public', 'public'])
+  if (!prop) return true
+  if (prop.type === 'checkbox') return Boolean(prop.checkbox)
+  if (prop.type === 'select') {
+    const value = prop.select?.name?.trim()
+    if (!value) return true
+    return !['否', '不公开', '隐藏', 'private', 'Private', 'hidden', 'Hidden'].includes(value)
+  }
+  return true
 }
 
 function mapPageToPost(page: any): NotionPost {
@@ -127,9 +193,22 @@ function mapPageToPost(page: any): NotionPost {
   }
 }
 
+function mapPageToDailyEntry(page: any): NotionDailyEntry {
+  return {
+    id: page.id,
+    title: readDailyTitle(page),
+    date: readDailyDate(page),
+    tags: readDailyTags(page),
+    isPublic: readDailyIsPublic(page),
+  }
+}
+
 async function getPublishedPostsImpl(): Promise<NotionPost[]> {
   const notion = getNotionClient()
-  const pages = await queryAllPages(notion)
+  const pages = await queryAllPages(
+    notion,
+    ensureDatabaseId(databaseId, 'NOTION_DATABASE_ID')
+  )
 
   const posts = pages.map((page: any) => mapPageToPost(page))
 
@@ -149,10 +228,24 @@ async function getPublishedPostsImpl(): Promise<NotionPost[]> {
     return bt - at
   }
 
-  const filtered = posts.filter((post) => publishedSet.has((post.status || '').trim()))
+  const filtered = posts.filter((post) =>
+    publishedSet.has((post.status || '').trim())
+  )
   // Fallback: when status naming differs, still show articles instead of empty page.
   if (filtered.length === 0) return posts.sort(sortByDateDesc)
   return filtered.sort(sortByDateDesc)
+}
+
+async function getPublishedDailyEntriesImpl(): Promise<NotionDailyEntry[]> {
+  if (!notionToken || !dailyDatabaseId) return []
+
+  const notion = getNotionClient()
+  const pages = await queryAllPages(notion, dailyDatabaseId)
+
+  return pages
+    .map((page: any) => mapPageToDailyEntry(page))
+    .filter((entry) => entry.isPublic && Boolean(entry.date))
+    .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
 }
 
 export async function getPostContent(pageId: string): Promise<string> {
@@ -221,17 +314,37 @@ async function getPostBlocksImpl(pageId: string): Promise<NotionBlockNode[]> {
   return buildBlockTree(notion, pageId)
 }
 
-const getPublishedPostsCached = unstable_cache(getPublishedPostsImpl, ['notion-published-posts'], {
-  revalidate: 60,
-})
+async function getDailyEntryBlocksImpl(
+  pageId: string
+): Promise<NotionBlockNode[]> {
+  if (!notionToken) return []
+  const notion = getNotionClient()
+  return buildBlockTree(notion, pageId)
+}
 
-const getPostByIdCached = unstable_cache(getPostByIdImpl, ['notion-post-by-id'], {
-  revalidate: 300,
-})
+const getPublishedPostsCached = unstable_cache(
+  getPublishedPostsImpl,
+  ['notion-published-posts'],
+  {
+    revalidate: 60,
+  }
+)
 
-const getPostBlocksCached = unstable_cache(getPostBlocksImpl, ['notion-post-blocks'], {
-  revalidate: 300,
-})
+const getPostByIdCached = unstable_cache(
+  getPostByIdImpl,
+  ['notion-post-by-id'],
+  {
+    revalidate: 300,
+  }
+)
+
+const getPostBlocksCached = unstable_cache(
+  getPostBlocksImpl,
+  ['notion-post-blocks'],
+  {
+    revalidate: 300,
+  }
+)
 
 export async function getPublishedPosts(): Promise<NotionPost[]> {
   return getPublishedPostsCached()
@@ -241,6 +354,18 @@ export async function getPostById(pageId: string): Promise<NotionPost | null> {
   return getPostByIdCached(pageId)
 }
 
-export async function getPostBlocks(pageId: string): Promise<NotionBlockNode[]> {
+export async function getPostBlocks(
+  pageId: string
+): Promise<NotionBlockNode[]> {
   return getPostBlocksCached(pageId)
+}
+
+export async function getPublishedDailyEntries(): Promise<NotionDailyEntry[]> {
+  return getPublishedDailyEntriesImpl()
+}
+
+export async function getDailyEntryBlocks(
+  pageId: string
+): Promise<NotionBlockNode[]> {
+  return getDailyEntryBlocksImpl(pageId)
 }

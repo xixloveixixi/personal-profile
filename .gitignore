@@ -22,6 +22,9 @@ out
 .DS_Store
 *.pem
 Thumbs.db
+.superpowers/
+__pycache__/
+*.py[cod]
 
 # Debug
 npm-debug.log*
@@ -66,4 +69,3 @@ Thumbs.db
 **/public/sw.js.map
 **/public/workbox-*.js.map
 **/public/worker-*.js.map
-
