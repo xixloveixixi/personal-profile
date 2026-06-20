@@ -6,6 +6,7 @@ node_modules/
 # Testing
 /coverage
 *.log
+docs/evals/results/
 
 # Next.js
 /.next/
@@ -25,6 +26,7 @@ Thumbs.db
 .superpowers/
 __pycache__/
 *.py[cod]
+skills-lock.json
 
 # Debug
 npm-debug.log*
